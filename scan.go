@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"webtyp.com/modfind"
+	"webtyp.com/msgtype"
 )
 
 // ScanModules syncs the DB schema of every discovered module to the injected
@@ -18,7 +19,7 @@ import (
 // No-op if no syncer is injected (CLI codegen-only path).
 func (g *Generator) ScanModules(rootDir string) error {
 	if g.syncer == nil {
-		g.log("ready (no db syncer)")
+		g.log(msgtype.Debug, "ready (no db syncer)")
 		return nil
 	}
 	g.log("scanning modules...")

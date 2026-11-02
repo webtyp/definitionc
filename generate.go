@@ -138,6 +138,10 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 
 		// Model Interface Methods
 		buf.Write(fmt.Sprintf("func (m *%s) ModelName() string { return \"%s\" }\n\n", info.Name, info.ModelName))
+		if info.Wire {
+			// model.Wirer: a transport format; form.New refuses it.
+			buf.Write(fmt.Sprintf("func (m *%s) Wire() bool { return true }\n\n", info.Name))
+		}
 
 		if hasExcludedField(info.Fields) {
 			buf.Write(fmt.Sprintf("var _schema%s = []model.Field{\n", info.Name))

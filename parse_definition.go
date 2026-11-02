@@ -92,6 +92,10 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 				val, _ := strconv.Unquote(lit.Value)
 				info.ModelName = val
 			}
+		case "Wire":
+			if id, ok := kv.Value.(*ast.Ident); ok && id.Name == "true" {
+				info.Wire = true
+			}
 		case "Fields":
 			fields, err := g.parseFields(kv.Value)
 			if err != nil {

@@ -846,3 +846,49 @@ var UserModel = model.Definition{
 		t.Errorf("expected no Item() method when no marks, got:\n%s", s)
 	}
 }
+
+// TestGenerate_Wire: a Definition with Wire: true gets Wire() (model.Wirer),
+// so form.New refuses it; a regular one does not.
+func TestGenerate_Wire(t *testing.T) {
+	src := `package p
+import "webtyp.com/model"
+var MsgModel = model.Definition{
+	Name: "msg",
+	Wire: true,
+	Fields: model.Fields{
+		{Name: "method", Type: model.Text()},
+	},
+}
+var NoteModel = model.Definition{
+	Name: "note",
+	Fields: model.Fields{
+		{Name: "text", Type: model.Text()},
+	},
+}
+`
+	tmpFile := writeTemp(t, src)
+	g := New()
+	fset := token.NewFileSet()
+	node, _ := parser.ParseFile(fset, tmpFile, nil, parser.ParseComments)
+	infos, err := g.parseDefinitionsInFile(tmpFile)
+	if err == nil {
+		_ = g.resolveStorage(infos, node)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := g.GenerateForFile(infos, tmpFile); err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(strings.TrimSuffix(tmpFile, ".go") + "_orm.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(content)
+	if !strings.Contains(s, "func (m *Msg) Wire() bool { return true }") {
+		t.Errorf("a Wire definition must generate Wire():\n%s", s)
+	}
+	if strings.Contains(s, "func (m *Note) Wire()") {
+		t.Errorf("a regular definition must not generate Wire():\n%s", s)
+	}
+}
