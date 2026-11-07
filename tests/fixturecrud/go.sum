@@ -1,5 +1,7 @@
 webtyp.com/fmt v1.0.0 h1:W0vMMGC6ezg1q2LarAEaVnNvZ26hVqzZdQQH1wcNogM=
 webtyp.com/fmt v1.0.0/go.mod h1:FmTxx713R45J21kbH5JOmKGaaCap3fJPA9Yl2n4Ch7U=
+webtyp.com/model v0.2.14 h1:e1hb0fQTBSJZ/XmycHvcwB+/5yZ16pY1ypz1orpN2w4=
+webtyp.com/model v0.2.14/go.mod h1:OkyYeE3GOG8eAQGhd9wVsORAhr+xYj3q8avpoGXG25c=
 webtyp.com/orm v0.12.26 h1:ammNt2DJpyxec4ZgvKY1I3xrpAiUzo5MfaKUE56K3mk=
 webtyp.com/orm v0.12.26/go.mod h1:Gr8m8heJ3MhrLmvS5mF5AE5ewu1uZAFpeXLzZGauCNw=
 webtyp.com/storage v0.1.18 h1:2l8jcY5mic8sSWKT76UEvqhC3ffTZQERpyIcmuqaDpA=
