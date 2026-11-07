@@ -437,7 +437,10 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 	}
 
 	outName := fmt.Convert(sourceFile).TrimSuffix(".go").String() + "_orm.go"
-	return os.WriteFile(outName, buf.Bytes(), 0644)
+	if err := os.WriteFile(outName, buf.Bytes(), 0644); err != nil {
+		return err
+	}
+	return o.writeCrudFile(infos, sourceFile)
 }
 
 // refTable is the table a foreign key points at. A Definition of the same package is found by its
@@ -465,7 +468,7 @@ func (o *Generator) packageDefinitions(dir string) ([]StructInfo, error) {
 	var defs []StructInfo
 	for _, e := range entries {
 		n := e.Name()
-		if e.IsDir() || !strings.HasSuffix(n, ".go") || strings.HasSuffix(n, "_test.go") || strings.HasSuffix(n, "_orm.go") {
+		if e.IsDir() || !strings.HasSuffix(n, ".go") || strings.HasSuffix(n, "_test.go") || strings.HasSuffix(n, "_orm.go") || strings.HasSuffix(n, "_crud.go") {
 			continue
 		}
 		infos, err := o.parseDefinitionsInFile(filepath.Join(dir, n))
