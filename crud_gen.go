@@ -1,4 +1,4 @@
-package ormc
+package definitionc
 
 import (
 	"bufio"

@@ -1,5 +1,5 @@
 // Package fixturekind is a local, real (non-model) Kind implementation used
-// only by the ormc probe integration test: it exercises the actual `go run`
+// only by the definitionc probe integration test: it exercises the actual `go run`
 // dependency probe against a package that genuinely compiles, instead of
 // mocking the toolchain.
 package fixturekind

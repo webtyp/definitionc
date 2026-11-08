@@ -1,6 +1,6 @@
-# Why `ormc` Generates So Much Code (and Why It's Free)
+# Why `definitionc` Generates So Much Code (and Why It's Free)
 
-Each struct in `model.go` produces a sizable `model_orm.go`: `ModelName()`, `Schema()`, `Pointers()`,
+Each struct in `definition.go` produces a sizable `definition_gen.go`: `ModelName()`, `Schema()`, `Pointers()`,
 `IsNil()`, `EncodeFields()`, `DecodeFields()`, plus a `*List` type with eight methods. A fair question —
 especially since the target is WASM, where binary size matters — is: *isn't this a lot of dead code?*
 
@@ -25,7 +25,7 @@ do at runtime with reflection, `webtyp/orm` does at build time as plain methods.
 
 ## Why unused generation does **not** bloat the binary
 
-`ormc` generates **uniformly**: every struct gets the full set, including `*List`, whether or not a given
+`definitionc` generates **uniformly**: every struct gets the full set, including `*List`, whether or not a given
 consumer uses it. This keeps the generator simple and predictable — no per-struct heuristics that could
 desync between generator and consumers (the same fragility avoided elsewhere in the design).
 

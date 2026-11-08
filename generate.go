@@ -1,4 +1,4 @@
-package ormc
+package definitionc
 
 import "webtyp.com/model"
 
@@ -441,7 +441,7 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 		}
 	}
 
-	outName := fmt.Convert(sourceFile).TrimSuffix(".go").String() + "_orm.go"
+	outName := fmt.Convert(sourceFile).TrimSuffix(".go").String() + GeneratedSuffix
 	if err := os.WriteFile(outName, buf.Bytes(), 0644); err != nil {
 		return err
 	}
@@ -473,7 +473,7 @@ func (o *Generator) packageDefinitions(dir string) ([]StructInfo, error) {
 	var defs []StructInfo
 	for _, e := range entries {
 		n := e.Name()
-		if e.IsDir() || !strings.HasSuffix(n, ".go") || strings.HasSuffix(n, "_test.go") || strings.HasSuffix(n, "_orm.go") || strings.HasSuffix(n, "_crud.go") {
+		if e.IsDir() || !strings.HasSuffix(n, ".go") || strings.HasSuffix(n, "_test.go") || strings.HasSuffix(n, "_gen.go") || strings.HasSuffix(n, "_crud.go") {
 			continue
 		}
 		infos, err := o.parseDefinitionsInFile(filepath.Join(dir, n))
@@ -598,7 +598,7 @@ type Exporter interface {
 	ExportDDL(models []model.Model) (string, error)
 }
 
-// Models scans root for model.go/models.go and returns one model.Model per database struct
+// Models scans root for definition.go and returns one model.Model per database struct
 // (NoDB structs skipped), in the order the files and declarations were read — the same root
 // always gives the same order. A model's foreign keys are in its SchemaExt(). It returns
 // ErrNoModelsFound when there is none.

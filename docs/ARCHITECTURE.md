@@ -1,11 +1,11 @@
-# ormc — Architecture
+# definitionc — Architecture
 
-> WHAT ormc is and WHY it works the way it does. The debate behind the
+> WHAT definitionc is and WHY it works the way it does. The debate behind the
 > storage-resolution decision lives in [DESIGN.md](DESIGN.md).
 
-## What ormc is
+## What definitionc is
 
-`webtyp.com/ormc` is the **code generator** of the webtyp data
+`webtyp.com/definitionc` is the **code generator** of the webtyp data
 stack — nothing else. It reads hand-written `model.Definition` literals and
 emits the concrete Go artifacts the runtime consumes: the plain struct, the
 `Fielder` methods (`Schema()`, `Pointers()`, codec), `Validate()`, typed
@@ -14,15 +14,15 @@ query-field helpers (`User_.Email`), and DDL FK metadata (`SchemaExt()`).
 It was split out of `webtyp.com/orm` (2026-07-10). The split
 boundaries:
 
-| Repo | Role | ormc's relationship |
+| Repo | Role | definitionc's relationship |
 |---|---|---|
-| `webtyp/model` | field/kind contract (`Definition`, `Field`, `Kind`) | ormc's INPUT contract |
-| `webtyp/ormc` | this repo: generator + `cmd/ormc` | — |
-| `webtyp/ddlc` | DDL migration tool (`tui`) | not a dependency of ormc anymore |
+| `webtyp/model` | field/kind contract (`Definition`, `Field`, `Kind`) | definitionc's INPUT contract |
+| `webtyp/definitionc` | this repo: generator + `cmd/definitionc` | — |
+| `webtyp/ddlc` | DDL migration tool (`tui`) | not a dependency of definitionc anymore |
 | `webtyp/orm` | query/scan/sync runtime | imported by generated read helpers |
 | `webtyp/sqlmcp` | MCP provider over the stack | consumer, not a dependency |
 
-ormc runs in two modes: standalone CLI (`cmd/ormc`) and **live watcher**
+definitionc runs in two modes: standalone CLI (`cmd/definitionc`) and **live watcher**
 inside the dev tool (`webtyp/app` feeds file events; see
 [SYNC_DESIGN.md](SYNC_DESIGN.md) and
 [diagrams/DB_SYNC.md](diagrams/DB_SYNC.md)). The watcher mode is a hard
@@ -43,7 +43,7 @@ var UserModel = model.Definition{Fields: []model.Field{
 }}
 ```
 
-Contract rules (all violations are **hard generation errors** — ormc never
+Contract rules (all violations are **hard generation errors** — definitionc never
 guesses):
 
 - `Type:` is mandatory on every field (fail-closed; the compile-time guard
@@ -60,7 +60,7 @@ guesses):
 
 ## Generation mechanism: AST over the user's source, always
 
-ormc parses the Definition literal with `go/ast`. It **never compiles or
+definitionc parses the Definition literal with `go/ast`. It **never compiles or
 executes the user's package**. Rationale (settled in the model repo,
 `docs/ARCHITECTURE.md` §9,
 <https://github.com/webtyp/model/blob/main/docs/ARCHITECTURE.md>):
@@ -80,7 +80,7 @@ runtime value, no longer a constant in the user's source. Resolution order:
 1. **Builtin table** for the closed set of `model.*` constructors
    (`model.Text` → `FieldText`, …; the two composition constructors derive
    their Go type from the captured ref argument).
-2. **Cached dependency probe** for every other constructor: ormc generates
+2. **Cached dependency probe** for every other constructor: definitionc generates
    a throwaway `main` that imports the kinds' packages, executes each
    captured constructor, and reads the REAL `Storage()` value. Key
    distinction: the no-compile rule above protects the **user's package**;
@@ -97,16 +97,16 @@ runtime value, no longer a constant in the user's source. Resolution order:
 
 ## Generated-code contract
 
-Generated files (`*_orm.go` and optionally `*_crud.go`) import:
+Generated files (`*_gen.go` and optionally `*_crud.go`) import:
 
 - `webtyp/model` — always (schema types).
 - `webtyp/orm` — when the model has DB role (query helpers `*orm.QB`).
 - `webtyp/crud` — in `*_crud.go` when the owning `go.mod` requires `webtyp.com/crud`.
 - The kind constructors' packages (e.g. `webtyp/input`) — `Schema()`
-  re-emits every `Type:` constructor expression **verbatim**; ormc passes
+  re-emits every `Type:` constructor expression **verbatim**; definitionc passes
   kinds through without understanding them.
 
-When the nearest `go.mod` requires `webtyp.com/crud`, `ormc` also writes `<source>_crud.go` next to `<source>_orm.go` (without build tags) exposing a single typed `Mount<Entity>(reg, store, <Entity>Rules{...})` helper function for table entities that declare `Allow` (`!info.NoDB && !info.Wire && info.Allow != 0`). If `webtyp.com/crud` is not required or no table entities allow actions, any existing `<source>_crud.go` is deleted.
+When the nearest `go.mod` requires `webtyp.com/crud`, `definitionc` also writes `<source>_crud.go` next to `<source>_gen.go` (without build tags) exposing a single typed `Mount<Entity>(reg, store, <Entity>Rules{...})` helper function for table entities that declare `Allow` (`!info.NoDB && !info.Wire && info.Allow != 0`). If `webtyp.com/crud` is not required or no table entities allow actions, any existing `<source>_crud.go` is deleted.
 
 The typed-field helpers (`User_.Email` used by `.Where(...).Eq(...)`) are
 part of the stable contract and are always generated. On why the generated
@@ -118,6 +118,6 @@ Flow diagram: [diagrams/ORMC_FLOW.md](diagrams/ORMC_FLOW.md).
 ## Failure doctrine
 
 Every ambiguity is a loud generation error naming the field/constructor and
-the fix. ormc never silently defaults a storage type, never skips a field
+the fix. definitionc never silently defaults a storage type, never skips a field
 it cannot parse, and never rewrites user source beyond the generated
-`*_orm.go` file.
+`*_gen.go` file.

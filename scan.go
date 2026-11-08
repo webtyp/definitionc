@@ -1,10 +1,11 @@
-package ormc
+package definitionc
 
 import (
 	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"webtyp.com/modfind"
 	"webtyp.com/msgtype"
@@ -12,9 +13,9 @@ import (
 
 // ScanModules syncs the DB schema of every discovered module to the injected
 // SchemaSyncer. Called once at startup by the tool (app), after SetSyncer.
-//   - Writable module (main / replace): regenerate <file>_orm.go from model.go,
+//   - Writable module (main / replace): regenerate <file>_gen.go from definition.go,
 //     then sync each DB struct.
-//   - Read-only module (cache): parse the committed model_orm.go, then sync.
+//   - Read-only module (cache): parse the committed definition_gen.go, then sync.
 //
 // No-op if no syncer is injected (CLI codegen-only path).
 func (g *Generator) ScanModules(rootDir string) error {
@@ -33,11 +34,11 @@ func (g *Generator) ScanModules(rootDir string) error {
 	for _, m := range mods {
 		if m.Writable() {
 			if err := g.scanWritableModule(m.Dir); err != nil {
-				g.log("ormc scan (writable)", m.Path, ":", err) // log-and-continue
+				g.log("definitionc scan (writable)", m.Path, ":", err) // log-and-continue
 			}
 		} else {
 			if err := g.scanReadonlyModule(m.Dir); err != nil {
-				g.log("ormc scan (readonly)", m.Path, ":", err)
+				g.log("definitionc scan (readonly)", m.Path, ":", err)
 			}
 		}
 	}
@@ -57,7 +58,7 @@ func (g *Generator) scanWritableModule(dir string) error {
 		}
 
 		fileName := info.Name()
-		if fileName == "model.go" || fileName == "models.go" {
+		if fileName == DefinitionFile {
 			infos, err := g.parseDefinitionsInFile(path)
 			if err != nil {
 				return nil // skip unparseable
@@ -107,7 +108,7 @@ func (g *Generator) scanReadonlyModule(dir string) error {
 			return nil
 		}
 
-		if filepath.Ext(path) == ".go" && (len(path) > 7 && path[len(path)-7:] == "_orm.go") {
+		if strings.HasSuffix(path, GeneratedSuffix) {
 			schemas, err := parseGenerated(path)
 			if err != nil {
 				g.log("failed to parse generated file", path, ":", err)

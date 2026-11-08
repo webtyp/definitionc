@@ -2,10 +2,10 @@
 
 > El proyecto del usuario importa **solo `orm`** (agnóstico) y **no contiene código de sync**.
 > `webtyp/app` (la herramienta) observa los ficheros y aplica el schema a una DB que **ella** posee.
-> `ormc` es **ciego a la base de datos**: opera solo con la interfaz `SchemaSyncer` inyectada.
+> `definitionc` es **ciego a la base de datos**: opera solo con la interfaz `SchemaSyncer` inyectada.
 >
 > **Una sola lectura.** Al arrancar, `devwatch` hace **un único `filepath.Walk`** del proyecto y va
-> pasando **cada fichero** a los manejadores vía `NewFileEvent`. `ormc` procesa **solo el fichero
+> pasando **cada fichero** a los manejadores vía `NewFileEvent`. `definitionc` procesa **solo el fichero
 > recibido** — nunca re-camina el proyecto. La selección de "qué manejador es dueño de qué fichero"
 > ya la resuelve **depfind** (`ThisFileIsMine`). El walk propio solo ocurre en el CLI standalone.
 
@@ -21,23 +21,23 @@ flowchart TD
     Pick -- "sqlite / in-memory" --> SQ["webtyp/sqlt<br/>Executor + Compiler"]
     PG --> DB["*orm.DB listo"]
     SQ --> DB
-    DB --> Inject["app envuelve db en dbSyncer (SchemaSyncer)<br/>y lo inyecta: ormc.Generator.SetSyncer(dbSyncer)"]
+    DB --> Inject["app envuelve db en dbSyncer (SchemaSyncer)<br/>y lo inyecta: definitionc.Generator.SetSyncer(dbSyncer)"]
 ```
 
-## 2. Dos modos de ejecución de ormc (de dónde vienen los ficheros)
+## 2. Dos modos de ejecución de definitionc (de dónde vienen los ficheros)
 
 ```mermaid
 flowchart TD
-    Mode{"¿Cómo se ejecuta ormc?"}
+    Mode{"¿Cómo se ejecuta definitionc?"}
 
     Mode -- "A) Integrado en webtyp/app" --> WatchScan["devwatch: UN solo filepath.Walk al arrancar"]
     WatchScan --> DepGate["depfind: ThisFileIsMine?<br/>(gate de propiedad por manejador)"]
     DepGate --> PerFile["Por cada fichero: handler.NewFileEvent(file, ext, path, evt)"]
     PerFile --> LiveEdit["Edición en vivo: el watcher emite<br/>UN evento por el fichero que cambió"]
-    LiveEdit --> ProcessOne["ormc procesa SOLO ese fichero<br/>(NO re-camina el proyecto)"]
+    LiveEdit --> ProcessOne["definitionc procesa SOLO ese fichero<br/>(NO re-camina el proyecto)"]
 
-    Mode -- "B) CLI standalone (cmd/ormc/main.go)" --> CliWalk["No hay watcher → ormc.Run()<br/>camina el proyecto por su cuenta (única vez)"]
-    CliWalk --> ProcessAll["Procesa todos los model.go encontrados"]
+    Mode -- "B) CLI standalone (cmd/definitionc/main.go)" --> CliWalk["No hay watcher → definitionc.Run()<br/>camina el proyecto por su cuenta (única vez)"]
+    CliWalk --> ProcessAll["Procesa todos los definition.go encontrados"]
 
     ProcessOne --> Done(["→ §3 procesamiento por fichero"])
     ProcessAll --> Done
@@ -47,22 +47,22 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Event(["NewFileEvent(fileName, ext, filePath, evt)"]) --> IsModel{"¿fileName es<br/>model.go / models.go?"}
+    Event(["NewFileEvent(fileName, ext, filePath, evt)"]) --> IsModel{"¿fileName es<br/>definition.go / definition.go?"}
     IsModel -- "No" --> Skip(["return nil (otro manejador lo maneja)"])
     IsModel -- "Sí" --> ParseOne["Parsear SOLO filePath (AST)<br/>→ structs de ese fichero"]
     ParseOne --> Cache["Actualizar cache en memoria de structs<br/>(acumulado entre eventos)"]
     Cache --> Relations["Resolver relaciones contra el cache<br/>(refs FK a otras tablas ya vistas)"]
-    Relations --> GenFile["Generar <file>_orm.go<br/>(Schema() refleja el nuevo campo)"]
+    Relations --> GenFile["Generar <file>_gen.go<br/>(Schema() refleja el nuevo campo)"]
     GenFile --> HasSyncer{"¿syncer inyectado?"}
-    HasSyncer -- "No (CLI ormc)" --> OnlyGen(["Solo codegen, sin tocar DB"])
+    HasSyncer -- "No (CLI definitionc)" --> OnlyGen(["Solo codegen, sin tocar DB"])
     HasSyncer -- "Sí (modo app)" --> LoopStructs["Por cada struct DB del fichero (!NoDB):<br/>syncer.SyncSchema(table, []fmt.Field)"]
-    LoopStructs --> Blind["ormc ciego a la DB:<br/>solo conoce la interfaz SchemaSyncer"]
+    LoopStructs --> Blind["definitionc ciego a la DB:<br/>solo conoce la interfaz SchemaSyncer"]
     Blind --> AppSync["app dbSyncer → db.SyncSchema(table, fields)<br/>envuelve en modelo sintético → db.Sync"]
     AppSync --> Reconcile["db.Sync reconcilia (ver §4)<br/>emite Actions agnósticas"]
     Reconcile --> Translate["adapter (postgres/sqlt):<br/>traduce Actions → SQL de dialecto"]
     Translate --> Applied["DB actualizada en tiempo real"]
 
-    GenFile -. en paralelo .-> Recompile["WasmClient / Server recompilan<br/>contra el nuevo <file>_orm.go"]
+    GenFile -. en paralelo .-> Recompile["WasmClient / Server recompilan<br/>contra el nuevo <file>_gen.go"]
 ```
 
 ## 4. Reconciliación interna de db.Sync (additiva + introspectiva)
@@ -98,7 +98,7 @@ flowchart TD
 |------|-----------------|--------------|
 | **webtyp/app** (herramienta) | Lee `.env`, `orm.Open`, construye `*orm.DB`, inyecta `dbSyncer` | Sí (elige motor) |
 | **devwatch** | UN walk al arrancar + eventos en vivo; gate depfind por fichero | No |
-| **ormc.Generator** | Procesa **el fichero recibido**, regenera `<file>_orm.go`, llama `SchemaSyncer` | **No** (ciego) |
+| **definitionc.Generator** | Procesa **el fichero recibido**, regenera `<file>_gen.go`, llama `SchemaSyncer` | **No** (ciego) |
 | **orm raíz** | `Open`/`Register`, `SyncSchema`/`Sync`, emite `Action`s | No (agnóstico) |
 | **postgres / sqlt** | `init()` registra factory; traduce `Action`s → SQL | Sí (dialecto) |
 | **proyecto del usuario** | Define modelos. Importa solo `orm`. | **Sin código de sync** |

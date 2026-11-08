@@ -1,5 +1,5 @@
 ---
-PLAN: "feat!: ormc generates one Mount<Entity> with typed <Entity>Rules, only for tables that Allow actions"
+PLAN: "feat!: definitionc generates one Mount<Entity> with typed <Entity>Rules, only for tables that Allow actions"
 EXECUTOR: antigravity
 REVIEWER: none
 ---
@@ -9,7 +9,7 @@ REVIEWER: none
 > proceed or finalize — nobody answers, and a session that waits ends without your work. Commit after every stage.
 > Never run `git reset`, `git restore`, `git checkout -- <file>` or `git stash` on your own work.
 
-# Plan: `model_crud.go` = one `Mount<Entity>` per allowed table
+# Plan: `definition_crud.go` = one `Mount<Entity>` per allowed table
 
 ## Tools
 
@@ -26,7 +26,7 @@ go get webtyp.com/model@latest webtyp.com/crud@latest
 
 Decisions D19/D20 of `webtyp/docs/ARCHITECTURE_MASTER_PLAN.md`. Today `crud_gen.go` writes four functions per table entity
 (`Mount<E>Create/Read/Update/Delete`) whether the module uses them or not (`work_schedule`: 16 written, 1 used), and modules
-mount all four and answer the unwanted ones with `"not supported"` stubs. Now `crud` persists the table; `ormc` writes, only
+mount all four and answer the unwanted ones with `"not supported"` stubs. Now `crud` persists the table; `definitionc` writes, only
 for a table whose `model.Definition` sets `Allow`, one `Mount<E>` that builds a `crud.Table` from typed hooks.
 
 ## APIs used
@@ -49,10 +49,10 @@ error `field Allow of %s: write it as model.Create | model.Read | … (constants
 `Allow()` on the entity and the list (so its screen works with `view.NewCallerLister`) and **no** `Mount` — the module mounts
 it with `crud.Registry.Read`. Any other action on it → error `%s: only model.Read can be allowed on a model without a key field; Create/Update/Delete need
 a primary key declared with DB (a table, or a resource served by the module's own crud.Store)`. A resource served by its own `crud.Store`
-(D21: e.g. `access.RoleRecord`, `auth.LANIdentity`) declares its key with `DB: &model.FieldDB{PK: true}`, so `ormc` treats it as a table and
+(D21: e.g. `access.RoleRecord`, `auth.LANIdentity`) declares its key with `DB: &model.FieldDB{PK: true}`, so `definitionc` treats it as a table and
 generates its `Mount`; it is simply never listed in `migrate/`.
 
-## Stage 2 — `model_orm.go`: `Allow()` for every table entity
+## Stage 2 — `definition_gen.go`: `Allow()` for every table entity
 
 Next to the other generated methods of each table entity (not Wire, has DB) and of each read model with `Allow: model.Read`:
 ```go
@@ -70,7 +70,7 @@ For a table whose schema has more than one `IsPK()` field, the generated `Item()
 ## Stage 3 — `crud_gen.go`: replace the four functions by one
 
 `requiresCrud` unchanged. `tableEntities` = table entities **with `Allow != 0`** (no `Allow` → nothing generated; a package with
-none removes `model_crud.go`, existing behaviour). For each, write (only the hook fields of allowed actions; `Search`, `NewFilter`
+none removes `definition_crud.go`, existing behaviour). For each, write (only the hook fields of allowed actions; `Search`, `NewFilter`
 only when Read is allowed):
 
 ```go
@@ -107,24 +107,24 @@ func MountPost(reg crud.Registry, store crud.Store, rules PostRules) {
 	reg.Table(t)
 }
 ```
-`model_crud.go` carries **no build tag** (as today): a module's demo (`seed.Demo`, built with `-tags browser` for WASM) mounts the module through `crud.LoopbackActingAs`, so `MountPatient` must exist in that build; in an app's browser binary nothing calls it and the linker drops it. When the table does not allow Read, `PostRules` has no `Search`/`NewFilter` fields **and** the generated `MountPost` omits `Search: rules.Search, NewFilter: rules.NewFilter` (it must compile). Same for `Create`/`Update`/`Delete`: no field, no assignment. Imports of `model_crud.go`: `webtyp.com/crud`, `webtyp.com/model`, and `webtyp.com/storage` only when some entity allows Read.
+`definition_crud.go` carries **no build tag** (as today): a module's demo (`seed.Demo`, built with `-tags browser` for WASM) mounts the module through `crud.LoopbackActingAs`, so `MountPatient` must exist in that build; in an app's browser binary nothing calls it and the linker drops it. When the table does not allow Read, `PostRules` has no `Search`/`NewFilter` fields **and** the generated `MountPost` omits `Search: rules.Search, NewFilter: rules.NewFilter` (it must compile). Same for `Create`/`Update`/`Delete`: no field, no assignment. Imports of `definition_crud.go`: `webtyp.com/crud`, `webtyp.com/model`, and `webtyp.com/storage` only when some entity allows Read.
 Delete the old template (`Mount%sCreate/Read/Update/Delete`): `grep -n "Mount%sCreate\|Mount%sUpdate" crud_gen.go` → empty.
 
 ## Stage 4 — tests (`tests/crud_gen_test.go`, fixture `tests/testdata/fixturecrud`, rows in `docs/TESTS.md`)
 
-Fixture `model.go`: `PatientModel` gets `Allow: model.Create | model.Read | model.Update` (keeps its `input.Text()` field);
+Fixture `definition.go`: `PatientModel` gets `Allow: model.Create | model.Read | model.Update` (keeps its `input.Text()` field);
 add `NoteModel` (table, **no** `Allow`); keep `CodeEntryModel` (form without table).
 
 | Test | Expected |
 |---|---|
-| `TestCrudGen_Compiles` | after `Run`, `model_crud.go` has `func MountPatient(` and `type PatientRules struct`, `PatientRules` has `Create` and `Update` fields and **no** `Delete` field; no `MountNote`; no `MountCodeEntry`; `go vet ./...` in the fixture passes |
-| `TestCrudGen_AllowMethod` | `model_orm.go` has `func (*Patient) Allow() model.Action { return PatientModel.Allow }`, `func (*PatientList) Allow()` and `func (*Note) Allow()` |
+| `TestCrudGen_Compiles` | after `Run`, `definition_crud.go` has `func MountPatient(` and `type PatientRules struct`, `PatientRules` has `Create` and `Update` fields and **no** `Delete` field; no `MountNote`; no `MountCodeEntry`; `go vet ./...` in the fixture passes |
+| `TestCrudGen_AllowMethod` | `definition_gen.go` has `func (*Patient) Allow() model.Action { return PatientModel.Allow }`, `func (*PatientList) Allow()` and `func (*Note) Allow()` |
 | `TestCrudGen_ReadOnlyCompiles` | a table with `Allow: model.Read` only → generated code has no `rules.Create` and the fixture `go vet` passes |
 | `TestCrudGen_AllowOnWireIsError` | temp dir, definition with `Wire: true` and `Allow: model.Read` → `Run` error containing `cannot Allow` |
 | `TestCrudGen_ReadModelGetsAllowNoMount` | definition without DB fields and `Allow: model.Read` → `Allow()` generated, no `Mount`; with `Allow: model.Create` → error `only model.Read` |
 | `TestCrudGen_AllowNonConstantIsError` | `Allow: someVar` → `Run` error containing `constants only` |
-| `TestCrudGen_NoBuildTag` | the generated `model_crud.go` contains no `//go:build` line |
-| `TestCrudGen_NoAllowNoFile` | package requiring crud whose only table has no `Allow` → no `model_crud.go` |
+| `TestCrudGen_NoBuildTag` | the generated `definition_crud.go` contains no `//go:build` line |
+| `TestCrudGen_NoAllowNoFile` | package requiring crud whose only table has no `Allow` → no `definition_crud.go` |
 
 Update the existing tests that expect `MountPatientCreate` (`TestCrudGen_WrittenWhenGoModRequiresCrud`, `TestCrudGen_OnlyTableEntities`,
 `TestCrudGen_StaleFileRemoved`): their fixtures add `Allow` and they expect `MountPatient`.

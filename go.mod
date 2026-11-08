@@ -1,4 +1,4 @@
-module webtyp.com/ormc
+module webtyp.com/definitionc
 
 go 1.26.8
 
@@ -9,13 +9,3 @@ require (
 )
 
 require webtyp.com/msgtype v0.1.0
-
-require (
-	webtyp.com/calendar v0.1.0 // indirect
-	webtyp.com/crud v0.0.4 // indirect
-	webtyp.com/escape v0.1.0 // indirect
-	webtyp.com/json v0.5.40 // indirect
-	webtyp.com/router v0.4.19 // indirect
-	webtyp.com/storage v0.1.18 // indirect
-	webtyp.com/time v0.6.4 // indirect
-)

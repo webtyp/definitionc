@@ -1,4 +1,4 @@
-module webtyp.com/ormc/tests/fixturecrud
+module webtyp.com/definitionc/tests/fixturecrud
 
 go 1.26.8
 

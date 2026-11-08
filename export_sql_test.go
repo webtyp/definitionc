@@ -1,4 +1,4 @@
-package ormc
+package definitionc
 
 import (
 	"errors"
@@ -22,7 +22,7 @@ func (e *exportDDLCalled) ExportDDL(models []model.Model) (string, error) {
 }
 
 // TestExportSQL_NoModels_ReturnsErrNoModelsFound reproduces the reported bug:
-// webtyp -tui against a project with no model.go/models.go files (e.g. a
+// webtyp -tui against a project with no definition.go files (e.g. a
 // view-only project) still writes an empty config/schema.sql, because ExportSQL
 // silently returned ("", nil) — a "successful" empty result — for zero
 // models, instead of a distinguishable error. The button's Handler
@@ -30,7 +30,7 @@ func (e *exportDDLCalled) ExportDDL(models []model.Model) (string, error) {
 // error here means the file gets written even with nothing to export.
 func TestExportSQL_NoModels_ReturnsErrNoModelsFound(t *testing.T) {
 	g := New()
-	tmpDir := t.TempDir() // empty: no model.go/models.go anywhere
+	tmpDir := t.TempDir() // empty: no definition.go anywhere
 
 	exporter := &exportDDLCalled{}
 	sql, err := g.ExportSQL(tmpDir, exporter)
@@ -104,7 +104,7 @@ var DeviceModel = model.Definition{
 	},
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "models.go"), []byte(src), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "definition.go"), []byte(src), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	models, err := New().Models(dir)

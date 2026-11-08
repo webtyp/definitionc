@@ -2,7 +2,7 @@ package tests
 
 import (
 	"webtyp.com/model"
-	"webtyp.com/ormc/tests/fixtureuse"
+	"webtyp.com/definitionc/tests/fixtureuse"
 )
 
 var UserModel = model.Definition{

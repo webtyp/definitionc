@@ -1,4 +1,4 @@
-package ormc
+package definitionc
 
 import (
 	"go/parser"
@@ -7,7 +7,7 @@ import (
 
 // NewFileEvent implements the file-event contract for watchers (e.g. webtyp/app's devwatch).
 func (g *Generator) NewFileEvent(fileName, extension, filePath, event string) error {
-	if fileName != "model.go" && fileName != "models.go" {
+	if fileName != DefinitionFile {
 		return nil
 	}
 
@@ -31,7 +31,7 @@ func (g *Generator) NewFileEvent(fileName, extension, filePath, event string) er
 		g.cache[info.Name] = info
 	}
 
-	// 3. Regenerate just <file>_orm.go
+	// 3. Regenerate just <file>_gen.go
 	if err := g.GenerateForFile(infos, filePath); err != nil {
 		return err
 	}

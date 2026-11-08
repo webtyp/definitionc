@@ -1,4 +1,4 @@
-package ormc
+package definitionc
 
 import (
 	"go/parser"
@@ -14,7 +14,7 @@ import (
 func writeTemp(t *testing.T, content string) string {
 	t.Helper()
 	dir := t.TempDir()
-	p := filepath.Join(dir, "model.go")
+	p := filepath.Join(dir, "definition.go")
 	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ var ParentModel = model.Definition{
 		t.Fatal(err)
 	}
 
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -184,7 +184,7 @@ var ModelModel = model.Definition{
 		t.Fatal(err)
 	}
 
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -230,7 +230,7 @@ var ModelModel = model.Definition{
 		t.Fatal(err)
 	}
 
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -271,7 +271,7 @@ var ModelModel = model.Definition{
 		t.Fatal(err)
 	}
 
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -329,7 +329,7 @@ var SessionModel = model.Definition{
 		t.Fatal(err)
 	}
 
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -373,7 +373,7 @@ var UserModel = model.Definition{
 		t.Fatal(err)
 	}
 
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -429,7 +429,7 @@ var NoDBModel = model.Definition{
 		t.Fatal(err)
 	}
 
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -481,7 +481,7 @@ var PingArgsModel = model.Definition{
 		t.Fatal(err)
 	}
 
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -712,7 +712,7 @@ var PlanItemModel = model.Definition{
 	if err := g.GenerateForFile(infos, tmpFile); err != nil {
 		t.Fatal(err)
 	}
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -756,7 +756,7 @@ var ItemModel = model.Definition{
 	if err := g.GenerateForFile(infos, tmpFile); err != nil {
 		t.Fatal(err)
 	}
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -796,7 +796,7 @@ var EventModel = model.Definition{
 	if err := g.GenerateForFile(infos, tmpFile); err != nil {
 		t.Fatal(err)
 	}
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -835,7 +835,7 @@ var UserModel = model.Definition{
 	if err := g.GenerateForFile(infos, tmpFile); err != nil {
 		t.Fatal(err)
 	}
-	genFile := strings.TrimSuffix(tmpFile, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpFile, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)
@@ -879,7 +879,7 @@ var NoteModel = model.Definition{
 	if err := g.GenerateForFile(infos, tmpFile); err != nil {
 		t.Fatal(err)
 	}
-	content, err := os.ReadFile(strings.TrimSuffix(tmpFile, ".go") + "_orm.go")
+	content, err := os.ReadFile(strings.TrimSuffix(tmpFile, ".go") + "_gen.go")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,4 +1,4 @@
-package ormc
+package definitionc
 
 import "webtyp.com/model"
 
@@ -24,13 +24,13 @@ func (s *mockSyncer) SyncSchema(table string, fields []model.Field) error {
 }
 
 func TestScanModules(t *testing.T) {
-	tmpDir, _ := os.MkdirTemp("", "ormc_scan_test")
+	tmpDir, _ := os.MkdirTemp("", "definitionc_scan_test")
 	defer os.RemoveAll(tmpDir)
 
 	// Writable module
 	writableDir := filepath.Join(tmpDir, "writable")
 	os.MkdirAll(writableDir, 0755)
-	os.WriteFile(filepath.Join(writableDir, "model.go"), []byte(`package main
+	os.WriteFile(filepath.Join(writableDir, "definition.go"), []byte(`package main
 import "webtyp.com/model"
 var UserModel = model.Definition{
 	Name: "user",
@@ -44,7 +44,7 @@ var UserModel = model.Definition{
 	// Read-only module
 	readonlyDir := filepath.Join(tmpDir, "readonly")
 	os.MkdirAll(readonlyDir, 0755)
-	os.WriteFile(filepath.Join(readonlyDir, "model_orm.go"), []byte(`package readonly
+	os.WriteFile(filepath.Join(readonlyDir, "definition_gen.go"), []byte(`package readonly
 import "webtyp.com/fmt"
 func (m *Item) ModelName() string { return "items" }
 var _schemaItem = []model.Field{{Name: "id", Type: model.FieldText}}
@@ -52,7 +52,7 @@ var _schemaItem = []model.Field{{Name: "id", Type: model.FieldText}}
 
 	// Set an old mtime for readonly file to verify it's not rewritten
 	oldTime := time.Now().Add(-1 * time.Hour)
-	os.Chtimes(filepath.Join(readonlyDir, "model_orm.go"), oldTime, oldTime)
+	os.Chtimes(filepath.Join(readonlyDir, "definition_gen.go"), oldTime, oldTime)
 
 	g := New()
 	syncer := &mockSyncer{}
@@ -76,15 +76,15 @@ var _schemaItem = []model.Field{{Name: "id", Type: model.FieldText}}
 		t.Error("items table (readonly) not synced")
 	}
 
-	// Writable should have generated _orm.go
-	if _, err := os.Stat(filepath.Join(writableDir, "model_orm.go")); os.IsNotExist(err) {
-		t.Error("model_orm.go not generated in writable module")
+	// Writable should have generated _gen.go
+	if _, err := os.Stat(filepath.Join(writableDir, "definition_gen.go")); os.IsNotExist(err) {
+		t.Error("definition_gen.go not generated in writable module")
 	}
 
 	// MS4: Read-only should NOT have been rewritten
-	info, _ := os.Stat(filepath.Join(readonlyDir, "model_orm.go"))
+	info, _ := os.Stat(filepath.Join(readonlyDir, "definition_gen.go"))
 	if info.ModTime().After(oldTime) {
-		t.Error("readonly model_orm.go was rewritten")
+		t.Error("readonly definition_gen.go was rewritten")
 	}
 }
 
@@ -98,8 +98,8 @@ func TestScanModules_NoSyncer(t *testing.T) {
 }
 
 func TestScanModules_EmptyReadonly(t *testing.T) {
-	// MS5: read-only module with no *_orm.go -> skipped
-	tmpDir, _ := os.MkdirTemp("", "ormc_scan_empty")
+	// MS5: read-only module with no *_gen.go -> skipped
+	tmpDir, _ := os.MkdirTemp("", "definitionc_scan_empty")
 	defer os.RemoveAll(tmpDir)
 
 	readonlyDir := filepath.Join(tmpDir, "readonly")

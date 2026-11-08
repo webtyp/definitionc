@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"webtyp.com/ormc"
+	"webtyp.com/definitionc"
 )
 
 func TestCrudGen_WrittenWhenGoModRequiresCrud(t *testing.T) {
@@ -35,22 +35,22 @@ var PatientModel = model.Definition{
 	},
 }
 `
-	modelPath := filepath.Join(dir, "model.go")
+	modelPath := filepath.Join(dir, "definition.go")
 	if err := os.WriteFile(modelPath, []byte(modelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetSkipTidy(true)
 	gen.SetRootDir(dir)
 	if err := gen.Run(); err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
 
-	crudPath := filepath.Join(dir, "model_crud.go")
+	crudPath := filepath.Join(dir, "definition_crud.go")
 	data, err := os.ReadFile(crudPath)
 	if err != nil {
-		t.Fatalf("model_crud.go not found: %v", err)
+		t.Fatalf("definition_crud.go not found: %v", err)
 	}
 	content := string(data)
 
@@ -83,21 +83,21 @@ var PatientModel = model.Definition{
 	},
 }
 `
-	modelPath := filepath.Join(dir, "model.go")
+	modelPath := filepath.Join(dir, "definition.go")
 	if err := os.WriteFile(modelPath, []byte(modelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetSkipTidy(true)
 	gen.SetRootDir(dir)
 	if err := gen.Run(); err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
 
-	crudPath := filepath.Join(dir, "model_crud.go")
+	crudPath := filepath.Join(dir, "definition_crud.go")
 	if _, err := os.Stat(crudPath); !os.IsNotExist(err) {
-		t.Fatalf("expected model_crud.go to not exist, err=%v", err)
+		t.Fatalf("expected definition_crud.go to not exist, err=%v", err)
 	}
 }
 
@@ -122,17 +122,17 @@ var PatientModel = model.Definition{
 	},
 }
 `
-	modelPath := filepath.Join(dir, "model.go")
+	modelPath := filepath.Join(dir, "definition.go")
 	if err := os.WriteFile(modelPath, []byte(modelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	crudPath := filepath.Join(dir, "model_crud.go")
+	crudPath := filepath.Join(dir, "definition_crud.go")
 	if err := os.WriteFile(crudPath, []byte("// stale"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetSkipTidy(true)
 	gen.SetRootDir(dir)
 	if err := gen.Run(); err != nil {
@@ -140,7 +140,7 @@ var PatientModel = model.Definition{
 	}
 
 	if _, err := os.Stat(crudPath); !os.IsNotExist(err) {
-		t.Fatalf("expected stale model_crud.go to be removed, err=%v", err)
+		t.Fatalf("expected stale definition_crud.go to be removed, err=%v", err)
 	}
 }
 
@@ -176,22 +176,22 @@ var ByStaffModel = model.Definition{
 	},
 }
 `
-	modelPath := filepath.Join(dir, "model.go")
+	modelPath := filepath.Join(dir, "definition.go")
 	if err := os.WriteFile(modelPath, []byte(modelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetSkipTidy(true)
 	gen.SetRootDir(dir)
 	if err := gen.Run(); err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
 
-	crudPath := filepath.Join(dir, "model_crud.go")
+	crudPath := filepath.Join(dir, "definition_crud.go")
 	data, err := os.ReadFile(crudPath)
 	if err != nil {
-		t.Fatalf("model_crud.go not found: %v", err)
+		t.Fatalf("definition_crud.go not found: %v", err)
 	}
 	content := string(data)
 
@@ -209,23 +209,23 @@ func TestCrudGen_Compiles(t *testing.T) {
 	}
 
 	fixtureDir := filepath.Join("testdata", "fixturecrud")
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetRootDir(fixtureDir)
 	if err := gen.Run(); err != nil {
 		t.Fatalf("Run failed on fixturecrud: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(fixtureDir, "model_crud.go"))
+	data, err := os.ReadFile(filepath.Join(fixtureDir, "definition_crud.go"))
 	if err != nil {
-		t.Fatalf("model_crud.go not written for fixturecrud: %v", err)
+		t.Fatalf("definition_crud.go not written for fixturecrud: %v", err)
 	}
 	content := string(data)
 
 	if !strings.Contains(content, "func MountPatient(") {
-		t.Errorf("expected func MountPatient( in model_crud.go")
+		t.Errorf("expected func MountPatient( in definition_crud.go")
 	}
 	if !strings.Contains(content, "type PatientRules struct") {
-		t.Errorf("expected type PatientRules struct in model_crud.go")
+		t.Errorf("expected type PatientRules struct in definition_crud.go")
 	}
 	if !strings.Contains(content, "Create    func(c crud.Caller, tx crud.Tx, p *Patient) error") {
 		t.Errorf("expected Create field in PatientRules")
@@ -253,20 +253,20 @@ func TestCrudGen_Compiles(t *testing.T) {
 
 func TestCrudGen_AllowMethod(t *testing.T) {
 	fixtureDir := filepath.Join("testdata", "fixturecrud")
-	data, err := os.ReadFile(filepath.Join(fixtureDir, "model_orm.go"))
+	data, err := os.ReadFile(filepath.Join(fixtureDir, "definition_gen.go"))
 	if err != nil {
-		t.Fatalf("model_orm.go not found: %v", err)
+		t.Fatalf("definition_gen.go not found: %v", err)
 	}
 	content := string(data)
 
 	if !strings.Contains(content, "func (*Patient) Allow() model.Action     { return PatientModel.Allow }") {
-		t.Errorf("missing func (*Patient) Allow() in model_orm.go")
+		t.Errorf("missing func (*Patient) Allow() in definition_gen.go")
 	}
 	if !strings.Contains(content, "func (*PatientList) Allow() model.Action { return PatientModel.Allow }") {
-		t.Errorf("missing func (*PatientList) Allow() in model_orm.go")
+		t.Errorf("missing func (*PatientList) Allow() in definition_gen.go")
 	}
 	if !strings.Contains(content, "func (*Note) Allow() model.Action     { return NoteModel.Allow }") {
-		t.Errorf("missing func (*Note) Allow() in model_orm.go")
+		t.Errorf("missing func (*Note) Allow() in definition_gen.go")
 	}
 }
 
@@ -300,23 +300,23 @@ var ReadOnlyModel = model.Definition{
 	},
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "model.go"), []byte(modelContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "definition.go"), []byte(modelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetRootDir(dir)
 	if err := gen.Run(); err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "model_crud.go"))
+	data, err := os.ReadFile(filepath.Join(dir, "definition_crud.go"))
 	if err != nil {
-		t.Fatalf("model_crud.go not found: %v", err)
+		t.Fatalf("definition_crud.go not found: %v", err)
 	}
 	content := string(data)
 	if strings.Contains(content, "rules.Create") {
-		t.Errorf("expected no rules.Create in ReadOnly model_crud.go")
+		t.Errorf("expected no rules.Create in ReadOnly definition_crud.go")
 	}
 
 	cmd := exec.Command("go", "vet", "./...")
@@ -342,10 +342,10 @@ var WireModel = model.Definition{
 	},
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "model.go"), []byte(modelContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "definition.go"), []byte(modelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetRootDir(dir)
 	err := gen.Run()
 	if err == nil {
@@ -383,27 +383,27 @@ var ReportModel = model.Definition{
 	},
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "model.go"), []byte(modelContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "definition.go"), []byte(modelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetRootDir(dir)
 	if err := gen.Run(); err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
 
-	ormData, err := os.ReadFile(filepath.Join(dir, "model_orm.go"))
+	ormData, err := os.ReadFile(filepath.Join(dir, "definition_gen.go"))
 	if err != nil {
-		t.Fatalf("model_orm.go not found: %v", err)
+		t.Fatalf("definition_gen.go not found: %v", err)
 	}
 	if !strings.Contains(string(ormData), "func (*Report) Allow() model.Action") {
 		t.Errorf("expected Allow() method for Report")
 	}
 
-	crudPath := filepath.Join(dir, "model_crud.go")
+	crudPath := filepath.Join(dir, "definition_crud.go")
 	if _, err := os.Stat(crudPath); !os.IsNotExist(err) {
-		t.Errorf("expected no model_crud.go for read model without DB fields")
+		t.Errorf("expected no definition_crud.go for read model without DB fields")
 	}
 
 	// Test with Allow: model.Create -> error only model.Read
@@ -420,10 +420,10 @@ var BadReportModel = model.Definition{
 }
 `
 	badDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(badDir, "model.go"), []byte(badModelContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(badDir, "definition.go"), []byte(badModelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
-	genBad := ormc.New()
+	genBad := definitionc.New()
 	genBad.SetRootDir(badDir)
 	errBad := genBad.Run()
 	if errBad == nil {
@@ -450,10 +450,10 @@ var MyModel = model.Definition{
 	},
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "model.go"), []byte(modelContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "definition.go"), []byte(modelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetRootDir(dir)
 	err := gen.Run()
 	if err == nil {
@@ -466,12 +466,12 @@ var MyModel = model.Definition{
 
 func TestCrudGen_NoBuildTag(t *testing.T) {
 	fixtureDir := filepath.Join("testdata", "fixturecrud")
-	data, err := os.ReadFile(filepath.Join(fixtureDir, "model_crud.go"))
+	data, err := os.ReadFile(filepath.Join(fixtureDir, "definition_crud.go"))
 	if err != nil {
-		t.Fatalf("model_crud.go not found: %v", err)
+		t.Fatalf("definition_crud.go not found: %v", err)
 	}
 	if strings.Contains(string(data), "//go:build") {
-		t.Errorf("model_crud.go should NOT have a //go:build line")
+		t.Errorf("definition_crud.go should NOT have a //go:build line")
 	}
 }
 
@@ -498,19 +498,19 @@ var OnlyTableModel = model.Definition{
 	},
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "model.go"), []byte(modelContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "definition.go"), []byte(modelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetRootDir(dir)
 	if err := gen.Run(); err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
 
-	crudPath := filepath.Join(dir, "model_crud.go")
+	crudPath := filepath.Join(dir, "definition_crud.go")
 	if _, err := os.Stat(crudPath); !os.IsNotExist(err) {
-		t.Fatalf("expected no model_crud.go when only table has no Allow, err=%v", err)
+		t.Fatalf("expected no definition_crud.go when only table has no Allow, err=%v", err)
 	}
 }
 
@@ -529,19 +529,19 @@ var RoomEquipmentModel = model.Definition{
 	},
 }
 `
-	if err := os.WriteFile(filepath.Join(dir, "model.go"), []byte(modelContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "definition.go"), []byte(modelContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	gen := ormc.New()
+	gen := definitionc.New()
 	gen.SetRootDir(dir)
 	if err := gen.Run(); err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "model_orm.go"))
+	data, err := os.ReadFile(filepath.Join(dir, "definition_gen.go"))
 	if err != nil {
-		t.Fatalf("model_orm.go not found: %v", err)
+		t.Fatalf("definition_gen.go not found: %v", err)
 	}
 	if !strings.Contains(string(data), "model.JoinKey(") {
 		t.Errorf("expected model.JoinKey in Item(), got:\n%s", string(data))

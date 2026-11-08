@@ -1,4 +1,4 @@
-# Agent Guide — `webtyp/ormc`
+# Agent Guide — `webtyp/definitionc`
 
 <!-- webtyp:base — copied from devskills skill agents-md; do not edit here -->
 ## Ecosystem rules — read before any change
@@ -23,8 +23,8 @@
 
 ## This repo
 
-- `ormc` is a build-time code generator (CLI + library) that runs on the developer's machine, never in WASM:
+- `definitionc` is a build-time code generator (CLI + library) that runs on the developer's machine, never in WASM:
   stdlib (`go/ast`, `strings`, `os`) is legitimate here — do NOT "fix" it to `webtyp/fmt`.
 - It reads `model.Definition` literals through the Go AST (`parse_definition.go`); a rule about a field that `model`
   already states (e.g. `model.ValidateRow`) is CALLED here, never re-implemented.
-- Never edit a generated `*_orm.go` by hand, here or in a fixture: a wrong output is fixed in the generator.
+- Never edit a generated `*_gen.go` by hand, here or in a fixture: a wrong output is fixed in the generator.

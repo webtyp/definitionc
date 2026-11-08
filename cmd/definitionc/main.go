@@ -6,17 +6,17 @@ import (
 	"log"
 	"os"
 
-	"webtyp.com/ormc"
+	"webtyp.com/definitionc"
 )
 
 func main() {
 	flag.Parse()
 
-	o := ormc.New()
+	o := definitionc.New()
 	o.SetLog(func(messages ...any) {
 		fmt.Fprintln(os.Stderr, messages...)
 	})
 	if err := o.Run(); err != nil {
-		log.Fatalf("ormc: %v", err)
+		log.Fatalf("definitionc: %v", err)
 	}
 }

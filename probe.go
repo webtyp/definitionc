@@ -1,4 +1,4 @@
-package ormc
+package definitionc
 
 import (
 	"bytes"
@@ -133,7 +133,7 @@ func (g *Generator) getCacheKey(probes []fieldProbe) probeCacheKey {
 var probeCache = make(map[probeCacheKey][]probeResult)
 
 func defaultProbeRunner(mainContent string, workDir string) (string, error) {
-	tempDir := filepath.Join(workDir, ".ormcprobe")
+	tempDir := filepath.Join(workDir, ".definitioncprobe")
 	os.MkdirAll(tempDir, 0755)
 	defer os.RemoveAll(tempDir)
 

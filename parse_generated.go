@@ -1,4 +1,4 @@
-package ormc
+package definitionc
 
 import "webtyp.com/model"
 
@@ -26,7 +26,7 @@ var kindByName = map[string]model.Kind{
 	"FieldRaw":   model.Raw(),
 }
 
-// parseGenerated extracts (modelName → []model.Field) from a generated *_orm.go
+// parseGenerated extracts (modelName → []model.Field) from a generated *_gen.go
 // file by reading its `func (m *T) ModelName() string { return "<table>" }` and
 // its `var _schema<T> = []model.Field{ … }` composite literal.
 func parseGenerated(path string) (map[string][]model.Field, error) {
@@ -37,7 +37,7 @@ func parseGenerated(path string) (map[string][]model.Field, error) {
 	}
 
 	// dbStructs collects structs that have ReadOne*/ReadAll* helpers — the
-	// marker that ormc emitted DB helpers (i.e. the struct is NOT orm:no_db).
+	// marker that definitionc emitted DB helpers (i.e. the struct is NOT orm:no_db).
 	// Structs without these helpers must not be synced even if they have ModelName().
 	// Note: old generated files (pre orm:no_db) may lack ReadOne/ReadAll but still
 	// be valid DB structs — we fall back to allowing all structs if none are found,

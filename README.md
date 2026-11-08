@@ -1,4 +1,4 @@
-# ormc
+# definitionc
 <img src="docs/img/badges.svg">
 
 Go code generator for `webtyp/model` definitions: reads hand-written
@@ -10,10 +10,10 @@ codec, validation, and typed query helpers the runtime consumes.
 Install the CLI:
 
 ```bash
-go install webtyp.com/ormc/cmd/ormc@latest
+go install webtyp.com/definitionc/cmd/definitionc@latest
 ```
 
-Author a `model.go` (or `models.go`) with one or more `model.Definition`
+Author a `definition.go` (or `definition.go`) with one or more `model.Definition`
 literals. Each field declares its kind in the single `Type:` slot as a
 constructor expression — never a bare enum, never a struct tag:
 
@@ -48,11 +48,11 @@ var UserModel = model.Definition{
 Run the generator from the module root:
 
 ```bash
-ormc
+definitionc
 ```
 
-It walks the module for `model.go`/`models.go` files and writes one
-`<file>_orm.go` per source file, containing the plain struct, the
+It walks the module for `definition.go`/`definition.go` files and writes one
+`<file>_gen.go` per source file, containing the plain struct, the
 `Fielder` methods (`Schema()`, `Pointers()`, encode/decode), `Validate()`,
 typed query-field helpers (`User_.Email`), and `SchemaExt()` for any scalar
 FKs. `model.*` kinds resolve via a builtin table; every other kind (form
@@ -61,11 +61,11 @@ through a cached, generation-time dependency probe — see
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the resolution order and
 failure modes.
 
-Inside [webtyp/app](https://github.com/webtyp/app)'s dev console, ormc
+Inside [webtyp/app](https://github.com/webtyp/app)'s dev console, definitionc
 runs as a live TUI handler instead of the standalone CLI: `New()` returns a
 `*Generator` implementing the handler contract (`Name()`,
 `SupportedExtensions()`, `NewFileEvent(...)`), so the tool regenerates the
-affected `_orm.go` on every save and, once `SetSyncer` is called, syncs the
+affected `_gen.go` on every save and, once `SetSyncer` is called, syncs the
 DB schema. See [docs/SYNC_DESIGN.md](docs/SYNC_DESIGN.md) and
 [docs/diagrams/DB_SYNC.md](docs/diagrams/DB_SYNC.md) for the watcher/sync
 flow.
@@ -76,7 +76,7 @@ flow.
 
 ## List Items
 
-`ormc` generates a typed `func (m *X) Item() model.Item` for every model with at least one field marked `Item:` (`model.ItemLabel`, `model.ItemDescription`, `model.ItemBadge`). Multiple description fields are joined with `model.JoinItem`. A date field marked `ItemBadge` is rendered as seconds since 1970 (`fmt.Convert(int64(m.At)/1000000000).String()`).
+`definitionc` generates a typed `func (m *X) Item() model.Item` for every model with at least one field marked `Item:` (`model.ItemLabel`, `model.ItemDescription`, `model.ItemBadge`). Multiple description fields are joined with `model.JoinItem`. A date field marked `ItemBadge` is rendered as seconds since 1970 (`fmt.Convert(int64(m.At)/1000000000).String()`).
 
 Invalid item declarations are rejected at generation time via `model.ValidateItem`:
 - At most one `ItemLabel` and at most one `ItemBadge`.
@@ -94,7 +94,7 @@ compiler rejects a nanosecond instant in a seconds field.
 
 ## Generated CRUD mounts
 
-When the nearest `go.mod` requires `webtyp.com/crud`, `ormc` writes `<source>_crud.go` next to `<source>_orm.go` with one typed `Mount<Entity>` function:
+When the nearest `go.mod` requires `webtyp.com/crud`, `definitionc` writes `<source>_crud.go` next to `<source>_gen.go` with one typed `Mount<Entity>` function:
 
 `Allow` in the definition → `Mount<E>(reg, store, <E>Rules{…})`:
 
@@ -116,7 +116,7 @@ Only table entities that declare `Allow` (`!info.NoDB && !info.Wire && info.Allo
 
 ## Documentation
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — what ormc is post-split,
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — what definitionc is post-split,
   input contract (`Type:` constructor expressions), AST-only mechanism,
   storage resolution order, generated-code contract.
 - [docs/DESIGN.md](docs/DESIGN.md) — decision record: why storage resolves

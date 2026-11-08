@@ -1,15 +1,15 @@
 // Separate test module: isolates codegen fixture deps (orm runtime for
-// generated models) so the root webtyp.com/ormc module stays
+// generated models) so the root webtyp.com/definitionc module stays
 // fmt + model + modfind only.
-module webtyp.com/ormc/tests
+module webtyp.com/definitionc/tests
 
 go 1.26.8
 
 require (
+	webtyp.com/definitionc v0.1.39
 	webtyp.com/json v0.5.40
 	webtyp.com/model v0.2.15
 	webtyp.com/orm v0.12.28
-	webtyp.com/ormc v0.1.38
 	webtyp.com/time v0.6.4
 )
 
@@ -24,4 +24,4 @@ require (
 	webtyp.com/storage v0.1.19 // indirect
 )
 
-replace webtyp.com/ormc => ..
+replace webtyp.com/definitionc => ..

@@ -1,9 +1,9 @@
 
-package ormc
+package definitionc
 
 import "webtyp.com/modfind"
 
-// Ormc is the code generator handler for the ormc tool.
+// Generator is the code generator handler for the definitionc tool.
 type Generator struct {
 	logFn    func(messages ...any)
 	rootDir  string
@@ -14,7 +14,7 @@ type Generator struct {
 	probeRunner ProbeRunner
 }
 
-// NewOrmc creates a new Ormc handler with rootDir defaulting to ".".
+// NewOrmc creates a new Definitionc handler with rootDir defaulting to ".".
 func New() *Generator {
 	return &Generator{
 		rootDir: ".",
@@ -40,7 +40,7 @@ func (g *Generator) SetRootDir(dir string) {
 	g.rootDir = dir
 }
 
-// SetFinder injects the shared modfind.Finder (one go list across ssr/image/ormc).
+// SetFinder injects the shared modfind.Finder (one go list across ssr/image/definitionc).
 func (g *Generator) SetFinder(f modfind.Discoverer) {
 	g.finder = f
 }

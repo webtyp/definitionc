@@ -1,14 +1,14 @@
-// Package fixtureuse feeds the ormc probe integration test
+// Package fixtureuse feeds the definitionc probe integration test
 // (../probe_integration_test.go): a Definition using a real, local, non-model
 // Kind so the generation-time dependency probe actually shells out to
-// `go run` instead of a canned test double. Not named model.go/models.go on
+// `go run` instead of a canned test double. Not named definition.go on
 // purpose — it must not be picked up by the tests module's own
-// ormc.Run() scan.
+// definitionc.Run() scan.
 package fixtureuse
 
 import (
 	"webtyp.com/model"
-	"webtyp.com/ormc/tests/fixturekind"
+	"webtyp.com/definitionc/tests/fixturekind"
 )
 
 var FixtureModel = model.Definition{

@@ -1,6 +1,6 @@
 # Why Package-Level Schema Variables?
 
-Generated `model_orm.go` files declare schema definitions as package-level variables instead of inlining them inside the `Schema()` method:
+Generated `definition_gen.go` files declare schema definitions as package-level variables instead of inlining them inside the `Schema()` method:
 
 ```go
 // Generated pattern
@@ -50,4 +50,4 @@ The package-level slice is shared across all callers. A caller that mutates the 
 
 ## Summary
 
-Package-level schema variables exist for a single reason: **zero allocations per `Schema()` call**. The visual separation from the method is irrelevant since `model_orm.go` is generated code that is never edited by hand.
+Package-level schema variables exist for a single reason: **zero allocations per `Schema()` call**. The visual separation from the method is irrelevant since `definition_gen.go` is generated code that is never edited by hand.

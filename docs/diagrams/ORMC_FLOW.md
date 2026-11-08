@@ -11,13 +11,13 @@
 
 ```mermaid
 flowchart TD
-    Def["model.go<br/>var UserModel = model.Definition{...}"]
+    Def["definition.go<br/>var UserModel = model.Definition{...}"]
     Parse["go/ast parse of the literal<br/>(never compiles the user package)"]
     Field["per Field: Name, Type: constructor expr,<br/>NotNull, DB, Permitted, Ref (scalar FK)"]
     Kind{"Type: constructor?"}
     Builtin["model.* → builtin storage table<br/>Struct/StructSlice: Go type from ref arg"]
     Probe["other packages → dependency probe:<br/>temp main imports kind pkgs,<br/>go run executes real Storage(),<br/>cached by go.mod hash + constructor set"]
-    Emit["emit file_orm.go:<br/>struct (storage-mapped Go types),<br/>Schema() with Type: verbatim,<br/>codec + Validate + User_.Field helpers,<br/>SchemaExt() []ddlc.FieldExt if FKs"]
+    Emit["emit file_gen.go:<br/>struct (storage-mapped Go types),<br/>Schema() with Type: verbatim,<br/>codec + Validate + User_.Field helpers,<br/>SchemaExt() []ddlc.FieldExt if FKs"]
     Def --> Parse
     Parse --> Field
     Field --> Kind

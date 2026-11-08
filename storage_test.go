@@ -1,4 +1,4 @@
-package ormc
+package definitionc
 
 import (
 	"errors"
@@ -322,7 +322,7 @@ var UserModel = model.Definition{
 		t.Fatal(err)
 	}
 
-	genFile := strings.TrimSuffix(tmpPath, ".go") + "_orm.go"
+	genFile := strings.TrimSuffix(tmpPath, ".go") + "_gen.go"
 	content, err := os.ReadFile(genFile)
 	if err != nil {
 		t.Fatal(err)

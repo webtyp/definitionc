@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"webtyp.com/ormc"
+	"webtyp.com/definitionc"
 )
 
 // TestProbeIntegration_RealGoRun is the ONE integration test (plan §Stage 4)
@@ -21,10 +21,10 @@ func TestProbeIntegration_RealGoRun(t *testing.T) {
 	}
 	fixtureDir := filepath.Join(cwd, "fixtureuse")
 	defPath := filepath.Join(fixtureDir, "definitions.go")
-	outPath := filepath.Join(fixtureDir, "definitions_orm.go")
+	outPath := filepath.Join(fixtureDir, "definitions_gen.go")
 	defer os.Remove(outPath)
 
-	g := ormc.New()
+	g := definitionc.New()
 	g.SetRootDir(fixtureDir)
 
 	if err := g.GenerateForStruct("Fixture", defPath); err != nil {
