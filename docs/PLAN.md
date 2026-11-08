@@ -2,6 +2,8 @@
 PLAN: "feat!: ormc generates one Mount<Entity> with typed <Entity>Rules, only for tables that Allow actions"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 4261979677697193096
 ---
 
 > Read AGENTS.md at the repo root before any change.
