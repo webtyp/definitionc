@@ -2,8 +2,10 @@
 PLAN: "feat!: ormc generates one Mount<Entity> with typed <Entity>Rules, only for tables that Allow actions"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 4261979677697193096
+PR: https://github.com/webtyp/ormc/pull/5
+REVIEWED_COMMIT: c033773f28f15337926e3b064b6606657ebcf071
 ---
 
 > Read AGENTS.md at the repo root before any change.
