@@ -41,7 +41,7 @@ type FieldInfo struct {
 	RefColumn       string
 	OnDelete        string
 	Item            model.ItemSlot // list-item slot from Field.Item; ItemNone when absent
-	Options         string        // Definition var name from Field.Options (e.g. "ZoneModel"); "" when absent
+	Options         string         // Definition var name from Field.Options (e.g. "ZoneModel"); "" when absent
 	IsPK            bool
 	OldName         string
 	GoType          string
@@ -66,7 +66,6 @@ type StructInfo struct {
 	PackageName       string
 	Fields            []FieldInfo
 	ModelNameDeclared bool
-	IsForm            bool
 	NoDB              bool
 	Wire              bool // model.Definition{Wire: true}: a transport format, never a form
 	SourceFile        string

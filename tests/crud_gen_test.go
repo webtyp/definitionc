@@ -213,11 +213,25 @@ func TestCrudGen_Compiles(t *testing.T) {
 		t.Skip("go not on PATH")
 	}
 
-	fixtureDir := filepath.Join("fixturecrud")
+	fixtureDir := filepath.Join("testdata", "fixturecrud")
 	gen := ormc.New()
 	gen.SetRootDir(fixtureDir)
 	if err := gen.Run(); err != nil {
 		t.Fatalf("Run failed on fixturecrud: %v", err)
+	}
+
+	// A table entity with input.* fields gets its helpers; a form without a table does not.
+	data, err := os.ReadFile(filepath.Join(fixtureDir, "model_crud.go"))
+	if err != nil {
+		t.Fatalf("model_crud.go not written for fixturecrud (does its go.mod still require webtyp.com/crud?): %v", err)
+	}
+	for _, want := range []string{"MountPatientCreate", "MountPatientRead", "MountPatientUpdate", "MountPatientDelete"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("model_crud.go lacks %s: a table entity that is also a form must get CRUD helpers", want)
+		}
+	}
+	if strings.Contains(string(data), "MountCodeEntry") {
+		t.Error("model_crud.go has MountCodeEntry: a form without a table must get no CRUD helpers")
 	}
 
 	cmd := exec.Command("go", "vet", "./...")

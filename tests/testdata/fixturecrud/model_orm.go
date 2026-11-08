@@ -68,3 +68,36 @@ func ReadAllPatient(qb *orm.QB) (PatientList, error) {
 	return results, err
 }
 
+type CodeEntry struct {
+	Code string
+}
+
+func (m *CodeEntry) ModelName() string { return "code_entry" }
+
+func (m *CodeEntry) Schema() []model.Field { return CodeEntryModel.Fields }
+
+func (m *CodeEntry) Pointers() []any { return []any{&m.Code} }
+
+func (m *CodeEntry) IsNil() bool { return m == nil }
+
+func (m *CodeEntry) EncodeFields(w model.FieldWriter) {
+	w.String("code", m.Code)
+}
+
+func (m *CodeEntry) DecodeFields(r model.FieldReader) {
+	if v, ok := r.String("code"); ok { m.Code = v }
+}
+
+type CodeEntryList []*CodeEntry
+
+func (s *CodeEntryList) Len() int             { return len(*s) }
+func (s *CodeEntryList) At(i int) model.Fielder { return (*s)[i] }
+func (s *CodeEntryList) Append() model.Fielder  { v := &CodeEntry{}; *s = append(*s, v); return v }
+func (s *CodeEntryList) IsNil() bool          { return s == nil }
+func (s *CodeEntryList) EncodeFields(_ model.FieldWriter) {}
+func (s *CodeEntryList) DecodeFields(_ model.FieldReader) {}
+
+func (m *CodeEntry) Validate(action byte) error {
+	return model.ValidateFields(action, m)
+}
+

@@ -113,19 +113,14 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 		info.ModelName = ToSnakeCase(info.Name)
 	}
 
-	// Determine NoDB, IsForm, etc.
+	// A struct with no DB field is not a table.
 	hasDB := false
-	hasForm := false
 	for _, f := range info.Fields {
 		if f.HasDB {
 			hasDB = true
 		}
-		if f.KindConstructor != "" && strings.HasPrefix(f.KindConstructor, "input.") {
-			hasForm = true
-		}
 	}
 	info.NoDB = !hasDB
-	info.IsForm = hasForm
 
 	return info, nil
 }
@@ -447,7 +442,6 @@ func resolveStructType(ref string) string {
 	}
 	return strings.Join(parts, ".")
 }
-
 
 // validateItem hands model.ValidateItem the facts it reads (name, item slot, PK,
 // and whether Ref/Options are set) and names the Definition in the error.

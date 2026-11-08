@@ -62,7 +62,7 @@ func (o *Generator) writeCrudFile(infos []StructInfo, sourceFile string) error {
 	var tableEntities []StructInfo
 	if hasCrud {
 		for _, info := range infos {
-			if !info.NoDB && !info.Wire && !info.IsForm {
+			if !info.NoDB && !info.Wire { // a table entity is also a form (input.* fields): both get CRUD helpers
 				tableEntities = append(tableEntities, info)
 			}
 		}
