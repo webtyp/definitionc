@@ -43,6 +43,9 @@ func (m *Patient) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*Patient) Allow() model.Action     { return PatientModel.Allow }
+func (*PatientList) Allow() model.Action { return PatientModel.Allow }
+
 var Patient_ = struct {
 	Id string
 	Name string
@@ -64,6 +67,70 @@ func ReadAllPatient(qb *orm.QB) (PatientList, error) {
 	err := qb.ReadAll(
 		func() model.Model { return &Patient{} },
 		func(m model.Model) { results = append(results, m.(*Patient)) },
+	)
+	return results, err
+}
+
+type Note struct {
+	Id string
+	Text string
+}
+
+func (m *Note) ModelName() string { return "note" }
+
+func (m *Note) Schema() []model.Field { return NoteModel.Fields }
+
+func (m *Note) Pointers() []any { return []any{&m.Id, &m.Text} }
+
+func (m *Note) IsNil() bool { return m == nil }
+
+func (m *Note) EncodeFields(w model.FieldWriter) {
+	w.String("id", m.Id)
+	w.String("text", m.Text)
+}
+
+func (m *Note) DecodeFields(r model.FieldReader) {
+	if v, ok := r.String("id"); ok { m.Id = v }
+	if v, ok := r.String("text"); ok { m.Text = v }
+}
+
+type NoteList []*Note
+
+func (s *NoteList) Len() int             { return len(*s) }
+func (s *NoteList) At(i int) model.Fielder { return (*s)[i] }
+func (s *NoteList) Append() model.Fielder  { v := &Note{}; *s = append(*s, v); return v }
+func (s *NoteList) IsNil() bool          { return s == nil }
+func (s *NoteList) EncodeFields(_ model.FieldWriter) {}
+func (s *NoteList) DecodeFields(_ model.FieldReader) {}
+
+func (m *Note) Validate(action byte) error {
+	return model.ValidateFields(action, m)
+}
+
+func (*Note) Allow() model.Action     { return NoteModel.Allow }
+func (*NoteList) Allow() model.Action { return NoteModel.Allow }
+
+var Note_ = struct {
+	Id string
+	Text string
+}{
+	Id: "id",
+	Text: "text",
+}
+
+func ReadOneNote(qb *orm.QB, model *Note) (*Note, error) {
+	err := qb.ReadOne()
+	if err != nil {
+		return nil, err
+	}
+	return model, nil
+}
+
+func ReadAllNote(qb *orm.QB) (NoteList, error) {
+	var results NoteList
+	err := qb.ReadAll(
+		func() model.Model { return &Note{} },
+		func(m model.Model) { results = append(results, m.(*Note)) },
 	)
 	return results, err
 }

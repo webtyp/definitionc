@@ -106,7 +106,7 @@ Generated files (`*_orm.go` and optionally `*_crud.go`) import:
   re-emits every `Type:` constructor expression **verbatim**; ormc passes
   kinds through without understanding them.
 
-When the nearest `go.mod` requires `webtyp.com/crud`, `ormc` also writes `<source>_crud.go` next to `<source>_orm.go` (without build tags) exposing typed `Mount<Entity>Create/Read/Update/Delete` helper functions for table entities (`!info.NoDB && !info.Wire && !info.IsForm`). If `webtyp.com/crud` is not required or no table entities exist, any existing `<source>_crud.go` is deleted.
+When the nearest `go.mod` requires `webtyp.com/crud`, `ormc` also writes `<source>_crud.go` next to `<source>_orm.go` (without build tags) exposing a single typed `Mount<Entity>(reg, store, <Entity>Rules{...})` helper function for table entities that declare `Allow` (`!info.NoDB && !info.Wire && info.Allow != 0`). If `webtyp.com/crud` is not required or no table entities allow actions, any existing `<source>_crud.go` is deleted.
 
 The typed-field helpers (`User_.Email` used by `.Where(...).Eq(...)`) are
 part of the stable contract and are always generated. On why the generated

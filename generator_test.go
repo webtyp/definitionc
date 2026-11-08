@@ -385,8 +385,7 @@ var UserModel = model.Definition{
 		t.Errorf("missing _schemaUser variable for Exclude case")
 	}
 	if strings.Contains(s, "Name: \"secret\"") && strings.Contains(s, "_schemaUser") {
-		// This is a bit weak but good enough for a basic check
-		// We want to ensure "secret" is NOT in the _schemaUser literal.
+		t.Errorf("secret should not be in _schemaUser")
 	}
 
 	// Pointers should be filtered

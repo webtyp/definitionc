@@ -372,6 +372,11 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 		buf.Write("\treturn model.ValidateFields(action, m)\n")
 		buf.Write("}\n\n")
 
+		if !info.Wire && (!info.NoDB || info.Allow == uint8(model.Read)) {
+			buf.Write(fmt.Sprintf("func (*%s) Allow() model.Action     { return %sModel.Allow }\n", info.Name, info.Name))
+			buf.Write(fmt.Sprintf("func (*%sList) Allow() model.Action { return %sModel.Allow }\n\n", info.Name, info.Name))
+		}
+
 		writeItem(buf, info)
 
 		if !info.NoDB {
@@ -554,7 +559,7 @@ func newModelStub(info StructInfo, defs []StructInfo) *modelStub {
 			if field.DB == nil {
 				field.DB = &model.FieldDB{}
 			}
-			field.Permitted.Maximum = f.Maximum
+			field.Maximum = f.Maximum
 		}
 		stub.schema = append(stub.schema, field)
 		if f.Ref != "" {
@@ -633,12 +638,12 @@ func (g *Generator) ExportSQL(root string, exporter Exporter) (string, error) {
 // itemExpr is the Go expression turning field f of m into text for model.Item.
 // A date field becomes seconds since 1970 (what the date/hour widgets read).
 func itemExpr(f FieldInfo) string {
-	switch {
-	case f.GoType == "string":
+	switch f.GoType {
+	case "string":
 		return "m." + f.Name
-	case f.GoType == goTypeNano:
+	case goTypeNano:
 		return "fmt.Convert(int64(m." + f.Name + ")/1000000000).String()"
-	case f.GoType == goTypeUnix:
+	case goTypeUnix:
 		return "fmt.Convert(int64(m." + f.Name + ")).String()"
 	default:
 		return "fmt.Convert(m." + f.Name + ").String()"
@@ -648,9 +653,10 @@ func itemExpr(f FieldInfo) string {
 func writeItem(buf *fmt.Conv, info StructInfo) {
 	var id, label, badge string
 	var desc []string
+	var pks []string
 	for _, f := range info.Fields {
-		if f.PK && id == "" {
-			id = itemExpr(f)
+		if f.PK {
+			pks = append(pks, itemExpr(f))
 		}
 		switch f.Item {
 		case model.ItemLabel:
@@ -660,6 +666,11 @@ func writeItem(buf *fmt.Conv, info StructInfo) {
 		case model.ItemBadge:
 			badge = itemExpr(f)
 		}
+	}
+	if len(pks) > 1 {
+		id = "model.JoinKey(" + strings.Join(pks, ", ") + ")"
+	} else if len(pks) == 1 {
+		id = pks[0]
 	}
 	if label == "" {
 		return // not a listed model: no Item()

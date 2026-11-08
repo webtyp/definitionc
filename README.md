@@ -94,16 +94,25 @@ compiler rejects a nanosecond instant in a seconds field.
 
 ## Generated CRUD mounts
 
-When the nearest `go.mod` requires `webtyp.com/crud`, `ormc` writes `<source>_crud.go` next to `<source>_orm.go` with typed `Mount<Entity>Create/Read/Update/Delete` functions:
+When the nearest `go.mod` requires `webtyp.com/crud`, `ormc` writes `<source>_crud.go` next to `<source>_orm.go` with one typed `Mount<Entity>` function:
+
+`Allow` in the definition → `Mount<E>(reg, store, <E>Rules{…})`:
 
 ```go
-func MountPatientCreate(reg crud.Registry, create func(c crud.Caller, list PatientList) error) crud.Route
-func MountPatientRead(reg crud.Registry, newFilter func() model.Model, read func(c crud.Caller, args crud.ReadArgs, filter model.Model) (PatientList, error)) crud.Route
-func MountPatientUpdate(reg crud.Registry, update func(c crud.Caller, ids, fields []string, rec Patient) error) crud.Route
-func MountPatientDelete(reg crud.Registry, remove func(c crud.Caller, ids []string) error) crud.Route
+type PatientRules struct {
+	Create    func(c crud.Caller, tx crud.Tx, p *Patient) error
+	Update    func(c crud.Caller, tx crud.Tx, old, next *Patient, fields []string) error
+	Delete    func(c crud.Caller, tx crud.Tx, p *Patient) error
+	Search    func(c crud.Caller, text string) ([]storage.Condition, error)
+	NewFilter func() model.Model
+	Committed func(c crud.Caller, action model.Action, p *Patient, fields []string)
+	MFA       model.Action
+}
+
+func MountPatient(reg crud.Registry, store crud.Store, rules PatientRules)
 ```
 
-Only table entities (`!info.NoDB && !info.Wire && !info.IsForm`) receive mounts; packages without `crud` generate no CRUD file, and existing stale CRUD files are removed.
+Only table entities that declare `Allow` (`!info.NoDB && !info.Wire && info.Allow != 0`) receive mounts; without `Allow`, nothing is generated. Packages without `crud` generate no CRUD file, and existing stale CRUD files are removed.
 
 ## Documentation
 

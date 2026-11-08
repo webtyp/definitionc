@@ -7,10 +7,20 @@ import (
 
 // PatientModel is a real entity: a table AND a form (input.* fields with DB). It gets CRUD helpers.
 var PatientModel = model.Definition{
-	Name: "patient",
+	Name:  "patient",
+	Allow: model.Create | model.Read | model.Update,
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
 		{Name: "name", Type: input.Text(), Label: "Name", NotNull: true, DB: &model.FieldDB{}},
+	},
+}
+
+// NoteModel is a table with no Allow. It gets no CRUD helpers.
+var NoteModel = model.Definition{
+	Name: "note",
+	Fields: model.Fields{
+		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
+		{Name: "text", Type: model.Text(), DB: &model.FieldDB{}},
 	},
 }
 

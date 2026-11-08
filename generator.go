@@ -68,6 +68,7 @@ type StructInfo struct {
 	ModelNameDeclared bool
 	NoDB              bool
 	Wire              bool // model.Definition{Wire: true}: a transport format, never a form
+	Allow             uint8
 	SourceFile        string
 }
 

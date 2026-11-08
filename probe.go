@@ -49,7 +49,7 @@ func (g *Generator) runProbe(probes []fieldProbe, infos []StructInfo) ([]probeRe
 		// Rewrite expr to use alias
 		selector, constructor := parseConstructor(p.expr)
 		alias := pkgs[p.pkgPath]
-		expr := p.expr
+		var expr string
 		if selector != "" {
 			expr = alias + "." + p.expr[len(selector)+1:]
 		} else {

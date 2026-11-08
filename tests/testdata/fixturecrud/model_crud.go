@@ -5,31 +5,35 @@ package fixturecrud
 import (
 	"webtyp.com/crud"
 	"webtyp.com/model"
+	"webtyp.com/storage"
 )
 
-// MountPatientCreate mounts the create operation of Patient with a typed batch.
-func MountPatientCreate(reg crud.Registry, create func(c crud.Caller, list PatientList) error) crud.Route {
-	return reg.Create(func() model.ModelSlice { return &PatientList{} }, func(c crud.Caller, l model.ModelSlice) error {
-		return create(c, *l.(*PatientList))
-	})
+// PatientRules are the domain rules of Patient. Every hook is optional (nil = no rule) and runs per record inside the transaction;
+// Committed runs after the commit.
+type PatientRules struct {
+	Create    func(c crud.Caller, tx crud.Tx, p *Patient) error
+	Update    func(c crud.Caller, tx crud.Tx, old, next *Patient, fields []string) error
+	Search    func(c crud.Caller, text string) ([]storage.Condition, error)
+	NewFilter func() model.Model
+	Committed func(c crud.Caller, action model.Action, p *Patient, fields []string)
+	MFA       model.Action
 }
 
-// MountPatientRead mounts the read operation of Patient; newFilter may be nil (no filter).
-func MountPatientRead(reg crud.Registry, newFilter func() model.Model, read func(c crud.Caller, args crud.ReadArgs, filter model.Model) (PatientList, error)) crud.Route {
-	return reg.Read(&Patient{}, newFilter, func(c crud.Caller, args crud.ReadArgs, filter model.Model) (model.ModelSlice, error) {
-		list, err := read(c, args, filter)
-		return &list, err
-	})
-}
-
-// MountPatientUpdate mounts the update operation of Patient with a typed carrier record.
-func MountPatientUpdate(reg crud.Registry, update func(c crud.Caller, ids, fields []string, rec Patient) error) crud.Route {
-	return reg.Update(func() model.Model { return &Patient{} }, func(c crud.Caller, ids, fields []string, rec model.Model) error {
-		return update(c, ids, fields, *rec.(*Patient))
-	})
-}
-
-// MountPatientDelete mounts the delete operation of Patient.
-func MountPatientDelete(reg crud.Registry, remove func(c crud.Caller, ids []string) error) crud.Route {
-	return reg.Delete(&Patient{}, remove)
+// MountPatient offers what PatientModel.Allow lists, persisted by store, with rules.
+func MountPatient(reg crud.Registry, store crud.Store, rules PatientRules) {
+	t := crud.Table{Model: &Patient{}, NewList: func() model.ModelSlice { return &PatientList{} }, Store: store, Search: rules.Search, NewFilter: rules.NewFilter, MFA: rules.MFA}
+	if rules.Create != nil {
+		t.Create = func(c crud.Caller, tx crud.Tx, rec model.Model) error { return rules.Create(c, tx, rec.(*Patient)) }
+	}
+	if rules.Update != nil {
+		t.Update = func(c crud.Caller, tx crud.Tx, old, next model.Model, fields []string) error {
+			return rules.Update(c, tx, old.(*Patient), next.(*Patient), fields)
+		}
+	}
+	if rules.Committed != nil {
+		t.Committed = func(c crud.Caller, a model.Action, rec model.Model, fields []string) {
+			rules.Committed(c, a, rec.(*Patient), fields)
+		}
+	}
+	reg.Table(t)
 }

@@ -59,6 +59,9 @@ func (m *User) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*User) Allow() model.Action     { return UserModel.Allow }
+func (*UserList) Allow() model.Action { return UserModel.Allow }
+
 var User_ = struct {
 	Id string
 	FirstName string
@@ -132,6 +135,9 @@ func (s *OrderList) DecodeFields(_ model.FieldReader) {}
 func (m *Order) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
+func (*Order) Allow() model.Action     { return OrderModel.Allow }
+func (*OrderList) Allow() model.Action { return OrderModel.Allow }
 
 var Order_ = struct {
 	Id string
@@ -212,6 +218,9 @@ func (m *ModelWithIgnored) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*ModelWithIgnored) Allow() model.Action     { return ModelWithIgnoredModel.Allow }
+func (*ModelWithIgnoredList) Allow() model.Action { return ModelWithIgnoredModel.Allow }
+
 var ModelWithIgnored_ = struct {
 	Id string
 	Name string
@@ -277,6 +286,9 @@ func (m *MultiA) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*MultiA) Allow() model.Action     { return MultiAModel.Allow }
+func (*MultiAList) Allow() model.Action { return MultiAModel.Allow }
+
 var MultiA_ = struct {
 	Id string
 	Name string
@@ -337,6 +349,9 @@ func (s *MultiBList) DecodeFields(_ model.FieldReader) {}
 func (m *MultiB) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
+func (*MultiB) Allow() model.Action     { return MultiBModel.Allow }
+func (*MultiBList) Allow() model.Action { return MultiBModel.Allow }
 
 var MultiB_ = struct {
 	Id string
@@ -402,6 +417,9 @@ func (m *NumericTypes) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*NumericTypes) Allow() model.Action     { return NumericTypesModel.Allow }
+func (*NumericTypesList) Allow() model.Action { return NumericTypesModel.Allow }
+
 var NumericTypes_ = struct {
 	IdNumeric string
 	CountUint string
@@ -464,6 +482,9 @@ func (s *RefNoColumnList) DecodeFields(_ model.FieldReader) {}
 func (m *RefNoColumn) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
+func (*RefNoColumn) Allow() model.Action     { return RefNoColumnModel.Allow }
+func (*RefNoColumnList) Allow() model.Action { return RefNoColumnModel.Allow }
 
 var RefNoColumn_ = struct {
 	IdRef string
@@ -529,6 +550,9 @@ func (m *Renamed) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*Renamed) Allow() model.Action     { return RenamedModel.Allow }
+func (*RenamedList) Allow() model.Action { return RenamedModel.Allow }
+
 var Renamed_ = struct {
 	Id string
 }{
@@ -587,6 +611,9 @@ func (s *RenamedRefList) DecodeFields(_ model.FieldReader) {}
 func (m *RenamedRef) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
+func (*RenamedRef) Allow() model.Action     { return RenamedRefModel.Allow }
+func (*RenamedRefList) Allow() model.Action { return RenamedRefModel.Allow }
 
 var RenamedRef_ = struct {
 	Id string
@@ -655,6 +682,9 @@ func (m *ForeignRef) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*ForeignRef) Allow() model.Action     { return ForeignRefModel.Allow }
+func (*ForeignRefList) Allow() model.Action { return ForeignRefModel.Allow }
+
 var ForeignRef_ = struct {
 	Id string
 	FixtureId string
@@ -721,6 +751,9 @@ func (s *PointerReceiverList) DecodeFields(_ model.FieldReader) {}
 func (m *PointerReceiver) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
+func (*PointerReceiver) Allow() model.Action     { return PointerReceiverModel.Allow }
+func (*PointerReceiverList) Allow() model.Action { return PointerReceiverModel.Allow }
 
 var PointerReceiver_ = struct {
 	Id string
@@ -794,6 +827,9 @@ func (s *UserFormList) DecodeFields(_ model.FieldReader) {}
 func (m *UserForm) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
+func (*UserForm) Allow() model.Action     { return UserFormModel.Allow }
+func (*UserFormList) Allow() model.Action { return UserFormModel.Allow }
 
 var UserForm_ = struct {
 	Id string
@@ -939,6 +975,9 @@ func (m *UserWithComposition) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*UserWithComposition) Allow() model.Action     { return UserWithCompositionModel.Allow }
+func (*UserWithCompositionList) Allow() model.Action { return UserWithCompositionModel.Allow }
+
 var UserWithComposition_ = struct {
 	Id string
 	Name string
@@ -1002,6 +1041,9 @@ func (m *UserWithNoTilde) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*UserWithNoTilde) Allow() model.Action     { return UserWithNoTildeModel.Allow }
+func (*UserWithNoTildeList) Allow() model.Action { return UserWithNoTildeModel.Allow }
+
 var UserWithNoTilde_ = struct {
 	Id string
 	Nombre string
@@ -1062,6 +1104,9 @@ func (s *ShortAutoIncList) DecodeFields(_ model.FieldReader) {}
 func (m *ShortAutoInc) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
+func (*ShortAutoInc) Allow() model.Action     { return ShortAutoIncModel.Allow }
+func (*ShortAutoIncList) Allow() model.Action { return ShortAutoIncModel.Allow }
 
 var ShortAutoInc_ = struct {
 	Id string
@@ -1126,6 +1171,9 @@ func (s *SessionList) DecodeFields(_ model.FieldReader) {}
 func (m *Session) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
+func (*Session) Allow() model.Action     { return SessionModel.Allow }
+func (*SessionList) Allow() model.Action { return SessionModel.Allow }
 
 var Session_ = struct {
 	Id string

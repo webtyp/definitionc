@@ -96,6 +96,12 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 			if id, ok := kv.Value.(*ast.Ident); ok && id.Name == "true" {
 				info.Wire = true
 			}
+		case "Allow":
+			allow, err := parseAllow(varName, kv.Value)
+			if err != nil {
+				return nil, err
+			}
+			info.Allow = allow
 		case "Fields":
 			fields, err := g.parseFields(kv.Value)
 			if err != nil {
@@ -122,7 +128,55 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 	}
 	info.NoDB = !hasDB
 
+	if info.Wire && info.Allow != 0 {
+		return nil, fmt.Errf("%s: a Wire definition cannot Allow table actions", varName)
+	}
+	if info.NoDB && info.Allow != 0 {
+		if info.Allow != uint8(model.Read) {
+			return nil, fmt.Errf("%s: only model.Read can be allowed on a model without a key field; Create/Update/Delete need a primary key declared with DB (a table, or a resource served by the module's own crud.Store)", varName)
+		}
+	}
+	if (!info.NoDB || info.Allow == uint8(model.Read)) && !info.Wire {
+		for _, f := range info.Fields {
+			if strings.EqualFold(f.Name, "allow") || strings.EqualFold(f.ColumnName, "allow") {
+				return nil, fmt.Errf("%s: a field named allow collides with the generated Allow() method; rename the column", varName)
+			}
+		}
+	}
+
 	return info, nil
+}
+
+func parseAllow(varName string, expr ast.Expr) (uint8, error) {
+	switch t := expr.(type) {
+	case *ast.SelectorExpr:
+		switch t.Sel.Name {
+		case "Create":
+			return uint8(model.Create), nil
+		case "Read":
+			return uint8(model.Read), nil
+		case "Update":
+			return uint8(model.Update), nil
+		case "Delete":
+			return uint8(model.Delete), nil
+		}
+		return 0, fmt.Errf("field Allow of %s: write it as model.Create | model.Read | … (constants only)", varName)
+	case *ast.BinaryExpr:
+		if t.Op != token.OR {
+			return 0, fmt.Errf("field Allow of %s: write it as model.Create | model.Read | … (constants only)", varName)
+		}
+		left, err := parseAllow(varName, t.X)
+		if err != nil {
+			return 0, err
+		}
+		right, err := parseAllow(varName, t.Y)
+		if err != nil {
+			return 0, err
+		}
+		return left | right, nil
+	default:
+		return 0, fmt.Errf("field Allow of %s: write it as model.Create | model.Read | … (constants only)", varName)
+	}
 }
 
 func (g *Generator) parseFields(expr ast.Expr) ([]FieldInfo, error) {
