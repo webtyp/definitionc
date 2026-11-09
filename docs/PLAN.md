@@ -2,6 +2,8 @@
 PLAN: "feat!: definitionc generates the module's MountOperations from model.ModuleDefinition and Rules, and creates one rule skeleton per AddMyBusinessRule action"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 10740115110268957738
 ---
 
 > Read AGENTS.md at the repo root before any change.
