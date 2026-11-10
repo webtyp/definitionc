@@ -40,7 +40,7 @@ func TestSkeleton_CreatedForEachDomainAction(t *testing.T) {
 }
 
 func TestSkeleton_NotCreatedForStandard(t *testing.T) {
-	src := moduleSource("PatientModel", strings.Replace(patientModel, "model.AddMyBusinessRule", "model.HaveNoBusinessRule", -1))
+	src := moduleSource("PatientModel", strings.ReplaceAll(patientModel, "model.AddMyBusinessRule", "model.HaveNoBusinessRule"))
 	dir, err := generate(t, src, file{"module.go", moduleType})
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)

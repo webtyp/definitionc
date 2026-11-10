@@ -89,3 +89,20 @@ func TestModuleDefinition_NotMistakenForAnEntity(t *testing.T) {
 		t.Errorf("the module variable Definition was generated as an entity:\n%s", got)
 	}
 }
+
+func TestRules_TableWithoutKeyOnlyRead(t *testing.T) {
+	src := modelOnly(patientLiteral("model.Create", "model.Rules{Create: model.AddMyBusinessRule}", noKeyFields))
+	wantRuleError(t, src, "only model.Read")
+}
+
+func TestRules_WireMayOnlyRead(t *testing.T) {
+	src := modelOnly("var PatientModel = model.Definition{\n\tName: \"patient\",\n\tWire: true,\n\tAllow: model.Create,\n" +
+		"\tRules: model.Rules{Create: model.AddMyBusinessRule},\n\tFields: model.Fields{\n\t\t" + keyFields + "\n\t},\n}\n")
+	wantRuleError(t, src, "Wire")
+}
+
+func TestRules_AllowNonConstantIsError(t *testing.T) {
+	src := "package mod\n\nimport \"webtyp.com/model\"\n\nvar someVar = model.Read\n\n" +
+		patientLiteral("someVar", "model.Rules{Read: model.HaveNoBusinessRule}", keyFields)
+	wantRuleError(t, src, "constants only")
+}

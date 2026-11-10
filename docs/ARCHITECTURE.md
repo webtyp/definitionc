@@ -95,25 +95,79 @@ runtime value, no longer a constant in the user's source. Resolution order:
    verbatim; a probed kind resolving to struct/structslice storage is
    rejected (custom composition kinds are unsupported by design).
 
+## Module declaration
+
+A module is declared once, in `definition.go`: its name, the entities it serves, and for each entity the actions it
+allows and their rules. Four parts make it work.
+
+### The module file
+
+`var Definition = model.ModuleDefinition{Name: "...", Entities: []model.Definition{PatientModel}}` is read through the AST
+like any model. Every entity with `Allow` must be listed in `Entities`, every listed handler must be declared, and the
+package must have a `type Module` (written in `module.go`). Those checks run before anything is written, so a mismatch
+leaves the package as it was.
+
+The generator appends `ModelName()`, `Definition()` and `MountOperations(reg crud.Registry)` to `definition_gen.go`, the
+one generated file of the package. `MountOperations` offers each entity through `reg.AddStoredEntity` (a table) or
+`reg.AddReadOnlyEntity` (a model without a table, or a `Wire` format), with the `Rules` of the model. The store of each
+table is the one line the developer writes: `func (m *Module) StorePatient() crud.Store`.
+
+### Rule skeletons
+
+For every action declared `model.AddMyBusinessRule`, `definitionc` creates `rule_<entity>_<verb>.go` once. The file is
+the developer's from then on: `definitionc` never rewrites it, and a deleted file is recreated as a skeleton. A rule file
+for an action that is not declared `AddMyBusinessRule` is an error. An action declared `model.HaveNoBusinessRule` creates
+no file and mounts no hook. The signatures are listed in the [README](../README.md#3-the-rule-signatures).
+
+### Why a skeleton does not compile
+
+The skeleton declares its outputs (`var decision crud.RuleAnswer`, `var rejected error`) and returns nothing. The Go
+compiler then reports `declared and not used` and `missing return` in that file, next to the marker comment that says
+where to write the rule. The module is not runnable until the rule is written, which is the point: a business rule
+cannot be forgotten silently. A completed rule that returns the zero `crud.RuleAnswer` is refused at run time by crud
+(`ErrNoAnswer`), so the zero value never means "no decision".
+
+### What is generated and what is written by hand
+
+`definitionc` generates what is the same for every module: `ModelName()`, `Definition()` and `MountOperations`, which are
+derived from the declaration and cannot disagree with it. It writes the rule skeletons because they are the list of
+decisions the module still owes.
+
+It never generates `Module`, `New` or `Store<Entity>()`: the type that holds the connections, the constructor that
+receives them, and the store that persists each table are choices of the module (its database, its tenant, its tests).
+Hand-written code stays readable and replaceable, and the generator depends on exactly one name per table, `Store<Entity>`.
+
 ## Generated-code contract
 
-Generated files (`*_gen.go` and optionally `*_crud.go`) import:
+Generated files (`*_gen.go`) import:
 
 - `webtyp/model` — always (schema types).
 - `webtyp/orm` — when the model has DB role (query helpers `*orm.QB`).
-- `webtyp/crud` — in `*_crud.go` when the owning `go.mod` requires `webtyp.com/crud`.
-- The kind constructors' packages (e.g. `webtyp/input`) — `Schema()`
-  re-emits every `Type:` constructor expression **verbatim**; definitionc passes
+- `webtyp/crud` — when the module declares a `Definition` (`MountOperations` takes a `crud.Registry`).
+- `webtyp/storage` — when a table declares `Rules.Read: model.AddMyBusinessRule` (its `Search` returns `storage.Condition`).
+- The kind constructors' packages (e.g. `webtyp/input`) — `Schema()` re-emits every `Type:` constructor expression **verbatim**; definitionc passes
   kinds through without understanding them.
-
-When the nearest `go.mod` requires `webtyp.com/crud`, `definitionc` also writes `<source>_crud.go` next to `<source>_gen.go` (without build tags) exposing a single typed `Mount<Entity>(reg, store, <Entity>Rules{...})` helper function for table entities that declare `Allow` (`!info.NoDB && !info.Wire && info.Allow != 0`). If `webtyp.com/crud` is not required or no table entities allow actions, any existing `<source>_crud.go` is deleted.
 
 The typed-field helpers (`User_.Email` used by `.Where(...).Eq(...)`) are
 part of the stable contract and are always generated. On why the generated
 volume costs nothing in WASM binaries:
 [WHY_GENERATED_CODE_IS_FREE.md](WHY_GENERATED_CODE_IS_FREE.md).
 
-Flow diagram: [diagrams/ORMC_FLOW.md](diagrams/ORMC_FLOW.md).
+Flow diagram: [diagrams/ORMC_FLOW.md](diagrams/ORMC_FLOW.md). Module flow: [diagrams/MODULE_GENERATION.md](diagrams/MODULE_GENERATION.md).
+
+## Other generated contracts
+
+- **List items.** `definitionc` generates `func (m *X) Item() model.Item` for every model with a field marked `Item:`
+  (`model.ItemLabel`, `model.ItemDescription`, `model.ItemBadge`). Several descriptions are joined with `model.JoinItem`; a
+  date marked `ItemBadge` is rendered as seconds since 1970. Invalid declarations are rejected by `model.ValidateItem`:
+  at most one label and one badge, description or badge only with a label, listed models need a primary key, and only
+  scalar fields can be shown. A composite key is joined with `model.JoinKey`.
+- **Instants.** `model.UnixTime()` and `model.NanoTime()` generate fields typed `time.Unix` and `time.Nano`, imported
+  automatically. They are stored as integers: `Pointers()` exposes them as `(*int64)(&m.Field)`, and the codec converts
+  explicitly, so storage backends need no change while the compiler rejects a nanosecond instant in a seconds field.
+- **Models.** `Models(root) ([]model.Model, error)` returns the database models of a root in file order, with their foreign
+  keys in `SchemaExt()`, a select's `Options` table, and an instant's kind. It returns `ErrNoModelsFound` when there is
+  none; `webtyp/erd` uses it.
 
 ## Failure doctrine
 

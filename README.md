@@ -1,134 +1,104 @@
 # definitionc
 <img src="docs/img/badges.svg">
 
-Go code generator for `webtyp/model` definitions: reads hand-written
-`model.Definition` literals via AST and emits the concrete struct, schema,
-codec, validation, and typed query helpers the runtime consumes.
+`definitionc` is the code generator of a webtyp module. You declare the module once, in `definition.go`; it writes the
+module's operations and one rule file for every business rule you declare. You write the rules, never the wiring.
 
-## Quick-start
+## 1. Why This Exists
 
-Install the CLI:
-
-```bash
-go install webtyp.com/definitionc/cmd/definitionc@latest
-```
-
-Author a `definition.go` (or `definition.go`) with one or more `model.Definition`
-literals. Each field declares its kind in the single `Type:` slot as a
-constructor expression — never a bare enum, never a struct tag:
+**Without it**, a module mounts its entities by hand in an `ops.go`:
 
 ```go
-package myapp
-
-import (
-	"webtyp.com/model"
-	"webtyp.com/input"
-)
-
-var AddressModel = model.Definition{
-	Name: "address",
-	Fields: model.Fields{
-		{Name: "street", Type: model.Text()},
-		{Name: "city", Type: model.Text()},
-	},
+// ops.go, written by hand: every entity and every rule is a line someone must remember.
+func (m *Module) MountOperations(reg crud.Registry) {
+	reg.AddStoredEntity(crud.StoredEntity{Model: &Patient{}, /* … */ Create: createPatient})
+	// a new entity with actions added to the module but forgotten here is never offered
 }
+```
 
-var UserModel = model.Definition{
-	Name: "user",
+A forgotten entity is silent: the API simply does not have it. A rule that exists only in a comment is silent too.
+
+**With it**, the declaration is the only list. The entity says which actions it allows and which of them have a business
+rule. The generator mounts every allowed action, and for each business rule it creates a skeleton file that **does not
+compile** until someone writes the rule. The compiler is the reminder.
+
+## 2. Step-by-Step Guide
+
+**Step 1 — declare each model with its actions and their rules.** `Allow` is what the API offers; `Rules` says, for each
+allowed action, whether the entity has a business rule of its own (`model.AddMyBusinessRule`) or crud's checks are enough
+(`model.HaveNoBusinessRule`). An allowed action without a declared rule is an error.
+
+```go
+var PatientModel = model.Definition{
+	Name:  "patient",
+	Allow: model.Create | model.Read | model.Update,
+	Rules: model.Rules{Create: model.AddMyBusinessRule, Read: model.HaveNoBusinessRule, Update: model.AddMyBusinessRule},
 	Fields: model.Fields{
-		{Name: "id", Type: model.Int(), DB: &model.FieldDB{PK: true, AutoInc: true}},
-		{Name: "email", Type: input.Email(), NotNull: true},   // form kind: validates + renders
-		{Name: "status", Type: model.Text()},                   // base kind: validates only
-		{Name: "address", Type: model.Struct(&AddressModel)},   // composition: ref IN the constructor
-		{Name: "manager_id", Type: model.Int(), Ref: &UserModel}, // scalar FK: Ref's ONLY meaning
+		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
+		{Name: "name", Type: model.Text(), Item: model.ItemLabel},
 	},
 }
 ```
 
-Run the generator from the module root:
-
-```bash
-definitionc
-```
-
-It walks the module for `definition.go`/`definition.go` files and writes one
-`<file>_gen.go` per source file, containing the plain struct, the
-`Fielder` methods (`Schema()`, `Pointers()`, encode/decode), `Validate()`,
-typed query-field helpers (`User_.Email`), and `SchemaExt()` for any scalar
-FKs. `model.*` kinds resolve via a builtin table; every other kind (form
-kinds, project-custom kinds) resolves by executing its real `Storage()`
-through a cached, generation-time dependency probe — see
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the resolution order and
-failure modes.
-
-Inside [webtyp/app](https://github.com/webtyp/app)'s dev console, definitionc
-runs as a live TUI handler instead of the standalone CLI: `New()` returns a
-`*Generator` implementing the handler contract (`Name()`,
-`SupportedExtensions()`, `NewFileEvent(...)`), so the tool regenerates the
-affected `_gen.go` on every save and, once `SetSyncer` is called, syncs the
-DB schema. See [docs/SYNC_DESIGN.md](docs/SYNC_DESIGN.md) and
-[docs/diagrams/DB_SYNC.md](docs/diagrams/DB_SYNC.md) for the watcher/sync
-flow.
-
-## API
-
-`Models(root) ([]model.Model, error)` — the database models of root in file order: foreign keys in `SchemaExt()`, a select's `Options` table, and an instant's kind (`UnixTime`, `NanoTime`), not just its storage; `ErrNoModelsFound` when none. Used by `webtyp/erd`.
-
-## List Items
-
-`definitionc` generates a typed `func (m *X) Item() model.Item` for every model with at least one field marked `Item:` (`model.ItemLabel`, `model.ItemDescription`, `model.ItemBadge`). Multiple description fields are joined with `model.JoinItem`. A date field marked `ItemBadge` is rendered as seconds since 1970 (`fmt.Convert(int64(m.At)/1000000000).String()`).
-
-Invalid item declarations are rejected at generation time via `model.ValidateItem`:
-- At most one `ItemLabel` and at most one `ItemBadge`.
-- Any `ItemDescription` or `ItemBadge` requires an `ItemLabel`.
-- Listed models require a primary key.
-- Only scalar fields can be shown in a list item.
-- `Row:` was replaced by `Item:`; legacy `Row:` marks are rejected.
-
-## Instants
-
-`model.UnixTime()` and `model.NanoTime()` generate fields typed `time.Unix` and `time.Nano` (`webtyp.com/time`), imported
-automatically. They are stored as integers: `Pointers()` exposes them as `(*int64)(&m.Field)`, and the codec converts
-explicitly (`w.Int("x", int64(m.X))`, `m.X = time.Unix(v)`), so storage backends and codecs need no change while the
-compiler rejects a nanosecond instant in a seconds field.
-
-## Generated CRUD mounts
-
-When the nearest `go.mod` requires `webtyp.com/crud`, `definitionc` writes `<source>_crud.go` next to `<source>_gen.go` with one typed `Mount<Entity>` function:
-
-`Allow` in the definition → `Mount<E>(reg, store, <E>Rules{…})`:
+**Step 2 — declare the module: its name and every entity it serves.**
 
 ```go
-type PatientRules struct {
-	Create    func(c crud.Caller, tx crud.Tx, p *Patient) error
-	Update    func(c crud.Caller, tx crud.Tx, old, next *Patient, fields []string) error
-	Delete    func(c crud.Caller, tx crud.Tx, p *Patient) error
-	Search    func(c crud.Caller, text string) ([]storage.Condition, error)
-	NewFilter func() model.Model
-	Committed func(c crud.Caller, action model.Action, p *Patient, fields []string)
-	MFA       model.Action
-}
-
-func MountPatient(reg crud.Registry, store crud.Store, rules PatientRules)
+var Definition = model.ModuleDefinition{Name: "patient_directory", Entities: []model.Definition{PatientModel}}
 ```
 
-Only table entities that declare `Allow` (`!info.NoDB && !info.Wire && info.Allow != 0`) receive mounts; without `Allow`, nothing is generated. Packages without `crud` generate no CRUD file, and existing stale CRUD files are removed.
+**Step 3 — write `module.go`, the hand-written part.** The module type, and one store method per table entity:
 
-## Documentation
+```go
+package patientdirectory
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — what definitionc is post-split,
-  input contract (`Type:` constructor expressions), AST-only mechanism,
-  storage resolution order, generated-code contract.
-- [docs/DESIGN.md](docs/DESIGN.md) — decision record: why storage resolves
-  via the cached dependency probe (directive and marker alternatives
-  rejected).
-- [docs/SYNC_DESIGN.md](docs/SYNC_DESIGN.md) — rationale and trade-offs of
-  tool-driven dev schema sync.
-- [docs/WHY_GENERATED_CODE_IS_FREE.md](docs/WHY_GENERATED_CODE_IS_FREE.md) —
-  why the generated volume costs zero bytes in WASM binaries.
-- [docs/WHY_PACKAGE_LEVEL_SCHEMA.md](docs/WHY_PACKAGE_LEVEL_SCHEMA.md) —
-  why generated `Schema()` returns a package-level variable (zero alloc).
-- [docs/diagrams/ORMC_FLOW.md](docs/diagrams/ORMC_FLOW.md) — Definition →
-  generated code flow, error table, runtime validation.
-- [docs/diagrams/DB_SYNC.md](docs/diagrams/DB_SYNC.md) — dev database
-  schema-sync flow (tool-driven).
+import "webtyp.com/crud"
+
+type Module struct{ store crud.Store }
+
+func (m *Module) StorePatient() crud.Store { return m.store }
+```
+
+**Step 4 — save `definition.go`** (or run `definitionc` in the module). The generator writes `definition_gen.go` with
+`ModelName()`, `Definition()` and `MountOperations(reg)`, and creates `rule_patient_create.go` with the rule skeleton.
+
+**Step 5 — complete the rule.** The skeleton declares the outputs and leaves them unused, so the module reports
+`declared and not used` and `missing return` until you return an answer. The marker `// COMPLETA TU REGLA DE NEGOCIO AQUÍ`
+shows where to write it. Once the file exists, `definitionc` never overwrites it.
+
+## 3. The Rule Signatures
+
+Each rule is a method on the record (`p` or `next`); `m` is the module, so a rule reaches its dependencies through `m`.
+The signatures are fixed:
+
+| Action | File | Signature |
+|---|---|---|
+| create | `rule_patient_create.go` | `func (p *Patient) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswer, error)` |
+| update | `rule_patient_update.go` | `func (next *Patient) Update(a crud.CurrentUser, tx crud.Tx, old *Patient, fields []string, m *Module) (crud.RuleAnswer, error)` |
+| delete | `rule_patient_delete.go` | `func (p *Patient) Delete(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswer, error)` |
+| search (table, `Rules.Read: AddMyBusinessRule`) | `rule_patient_search.go` | `func (p *Patient) Search(a crud.CurrentUser, text string, m *Module) ([]storage.Condition, error)` |
+| read (model without a table, `Rules.Read: AddMyBusinessRule`) | `rule_health_read.go` | `func (p *Health) Read(a crud.CurrentUser, args crud.ReadArgs, m *Module) (model.ModelSlice, error)` |
+
+- `Search` is called on a zero record (`(&Patient{}).Search(…)`): it uses no record data, only the text.
+- A table read declared `model.HaveNoBusinessRule` is crud's default read: id, search by the item label, page, cap and tenant.
+- A rule file for an action that is not declared `model.AddMyBusinessRule` is an error, so a deleted declaration cannot
+  leave a rule behind silently.
+- A model with a `Wire` format may only be read, through its own rule (`rule_<name>_read.go`).
+
+`definitionc` writes `ModelName()`, `Definition()` and `MountOperations(reg)` in `definition_gen.go`. It never writes
+`Module`, `New` or the `Store<Entity>()` methods: those are the module's own code.
+
+## 4. Documentation Map
+
+- [docs/diagrams/MODULE_GENERATION.md](docs/diagrams/MODULE_GENERATION.md) — what is generated when `definition.go` is saved,
+  with the decisions and the rule skeleton flow.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — the module file, the rule skeletons, why a skeleton does not compile, and
+  what is generated versus written by hand; plus the input contract and the storage resolution.
+- [docs/TESTS.md](docs/TESTS.md) — what each test of the module declaration proves.
+- [docs/DESIGN.md](docs/DESIGN.md) — decision record for the storage resolution.
+- [docs/SYNC_DESIGN.md](docs/SYNC_DESIGN.md) — tool-driven development schema sync.
+- [docs/WHY_GENERATED_CODE_IS_FREE.md](docs/WHY_GENERATED_CODE_IS_FREE.md) — why the generated volume costs zero bytes in WASM.
+- [docs/WHY_PACKAGE_LEVEL_SCHEMA.md](docs/WHY_PACKAGE_LEVEL_SCHEMA.md) — why `Schema()` returns a package-level variable.
+- [docs/diagrams/ORMC_FLOW.md](docs/diagrams/ORMC_FLOW.md) — `Definition` to generated code, error table, runtime validation.
+- [docs/diagrams/DB_SYNC.md](docs/diagrams/DB_SYNC.md) — development database schema sync (tool-driven).
+
+Run the tests with `gotest` in the module and in `tests/`.

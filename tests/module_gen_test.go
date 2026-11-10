@@ -198,3 +198,52 @@ func TestModule_Regenerates(t *testing.T) {
 		t.Errorf("a second run changed definition_gen.go")
 	}
 }
+
+func TestGenerate_AllowMethod(t *testing.T) {
+	got := moduleOutput(t, patientDef)
+	wantContains(t, got,
+		"func (*Patient) Allow() model.Action { return PatientModel.Allow }",
+		"func (*PatientList) Allow() model.Action { return PatientModel.Allow }",
+	)
+}
+
+func TestGenerate_CompositeItemID(t *testing.T) {
+	src := modelOnly(`var RoomEquipmentModel = model.Definition{
+	Name: "room_equipment",
+	Fields: model.Fields{
+		{Name: "room_id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
+		{Name: "equipment_id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
+		{Name: "name", Type: model.Text(), Item: model.ItemLabel},
+	},
+}
+`)
+	dir, err := generate(t, src)
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	if !strings.Contains(read(t, dir, "definition_gen.go"), "model.JoinKey(") {
+		t.Error("expected model.JoinKey in Item() of a composite key")
+	}
+}
+
+func TestGenerate_NoBuildTag(t *testing.T) {
+	if got := moduleOutput(t, patientDef); strings.Contains(got, "//go:build") {
+		t.Error("the generated module file must not carry a //go:build line")
+	}
+}
+
+func TestModule_NoAllowNoRuleFile(t *testing.T) {
+	note := "var NoteModel = model.Definition{\n\tName: \"note\",\n\tFields: model.Fields{\n\t\t" + keyFields + "\n\t},\n}\n"
+	dir, err := generate(t, moduleSource("NoteModel", note), file{"module.go", moduleType})
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	if strings.Contains(read(t, dir, "definition_gen.go"), "AddStoredEntity") {
+		t.Error("an entity that allows nothing was mounted")
+	}
+	for _, verb := range []string{"create", "update", "delete", "search", "read"} {
+		if exists(dir, "rule_note_"+verb+".go") {
+			t.Errorf("rule_note_%s.go was created for an entity that allows nothing", verb)
+		}
+	}
+}

@@ -5,6 +5,7 @@ package fixturecrud
 import (
 	"webtyp.com/model"
 	"webtyp.com/orm"
+	"webtyp.com/crud"
 )
 
 type Patient struct {
@@ -168,3 +169,24 @@ func (m *CodeEntry) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+// ModelName is the module identity: Definition.Name.
+const ModelName = "fixturecrud"
+
+func (m *Module) ModelName() string { return ModelName }
+
+// Definition is the module's declaration (definition.go); crud.Mount compares it with what MountOperations mounted.
+func (m *Module) Definition() model.ModuleDefinition { return Definition }
+
+// MountOperations offers every entity of the module: the actions its model allows, with crud's validation and the rules written in rule_*.go.
+func (m *Module) MountOperations(reg crud.Registry) {
+	reg.AddStoredEntity(crud.StoredEntity{
+		Model: &Patient{},
+		NewList: func() model.ModelSlice { return &PatientList{} },
+		Store: m.StorePatient(),
+		Rules: PatientModel.Rules,
+		MFA: PatientModel.MFA,
+		Create: func(a crud.CurrentUser, tx crud.Tx, rec model.Model) (crud.RuleAnswer, error) {
+			return rec.(*Patient).Create(a, tx, m)
+		},
+	})
+}

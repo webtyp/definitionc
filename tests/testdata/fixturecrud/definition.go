@@ -5,10 +5,14 @@ import (
 	"webtyp.com/model"
 )
 
-// PatientModel is a real entity: a table AND a form (input.* fields with DB). It gets CRUD helpers.
+// Definition is the fixture module: it lists the one entity that crud mounts.
+var Definition = model.ModuleDefinition{Name: "fixturecrud", Entities: []model.Definition{PatientModel}}
+
+// PatientModel is a real entity: a table AND a form (input.* fields with DB). Its operations are mounted by the module.
 var PatientModel = model.Definition{
 	Name:  "patient",
 	Allow: model.Create | model.Read | model.Update,
+	Rules: model.Rules{Create: model.AddMyBusinessRule, Read: model.HaveNoBusinessRule, Update: model.HaveNoBusinessRule},
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
 		{Name: "name", Type: input.Text(), Label: "Name", NotNull: true, DB: &model.FieldDB{}},
