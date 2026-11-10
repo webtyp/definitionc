@@ -173,9 +173,9 @@ import (
 	"webtyp.com/model"
 )
 
-// Read responde la lectura de {{entity}}, que no es una tabla: tú produces las filas.
+// Read responde la lectura de {{entity}}, que no es una tabla: tú produces las filas. filter trae los campos que envió quien llama.
 // crud ya validó los argumentos, aplicó el tope de página y comprobó el permiso antes de llamarte.
-func (p *{{type}}) Read(a crud.CurrentUser, args crud.ReadArgs, m *Module) (model.ModelSlice, error) {
+func (p *{{type}}) Read(a crud.CurrentUser, filter *{{type}}, args crud.ReadArgs, m *Module) (model.ModelSlice, error) {
 	// COMPLETA TU REGLA DE NEGOCIO AQUÍ (leer {{entity}}) y termina con: return rows, rejected
 	var rows model.ModelSlice // las filas que respondes
 	var rejected error        // el rechazo de tu regla; nil si todo está bien

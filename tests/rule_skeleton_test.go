@@ -63,7 +63,7 @@ func TestSkeleton_ExactShapes(t *testing.T) {
 		"rule_patient_update.go": "func (next *Patient) Update(a crud.CurrentUser, tx crud.Tx, old *Patient, fields []string, m *Module) (crud.RuleAnswer, error) {",
 		"rule_patient_delete.go": "func (p *Patient) Delete(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswer, error) {",
 		"rule_patient_search.go": "func (p *Patient) Search(a crud.CurrentUser, filter *Patient, text string, m *Module) ([]storage.Condition, error) {",
-		"rule_health_read.go":    "func (p *Health) Read(a crud.CurrentUser, args crud.ReadArgs, m *Module) (model.ModelSlice, error) {",
+		"rule_health_read.go":    "func (p *Health) Read(a crud.CurrentUser, filter *Health, args crud.ReadArgs, m *Module) (model.ModelSlice, error) {",
 	}
 	for name, signature := range shapes {
 		got := read(t, dir, name)

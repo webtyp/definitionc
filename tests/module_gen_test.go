@@ -96,8 +96,8 @@ func TestModule_ReadOnlyModelUsesRegistryRead(t *testing.T) {
 	src := moduleSource("HealthModel", healthModel)
 	got := moduleOutput(t, src)
 	wantContains(t, got,
-		`reg.AddReadOnlyEntity(&Health{}, nil, func(a crud.CurrentUser, args crud.ReadArgs, _ model.Model) (model.ModelSlice, error) {`,
-		`return (&Health{}).Read(a, args, m)`,
+		`reg.AddReadOnlyEntity(&Health{}, func() model.Model { return &Health{} }, func(a crud.CurrentUser, args crud.ReadArgs, filter model.Model) (model.ModelSlice, error) {`,
+		`return (&Health{}).Read(a, filter.(*Health), args, m)`,
 	)
 	if strings.Contains(got, "crud.StoredEntity{") {
 		t.Errorf("a model without a table was mounted as a stored entity:\n%s", got)
@@ -107,8 +107,8 @@ func TestModule_ReadOnlyModelUsesRegistryRead(t *testing.T) {
 func TestModule_WireModelUsesRegistryRead(t *testing.T) {
 	wire := strings.Replace(healthModel, "Allow: model.Read,", "Wire: true,\n\tAllow: model.Read,", 1)
 	wantContains(t, moduleOutput(t, moduleSource("HealthModel", wire)),
-		`reg.AddReadOnlyEntity(&Health{}, nil, func(a crud.CurrentUser, args crud.ReadArgs, _ model.Model) (model.ModelSlice, error) {`,
-		`return (&Health{}).Read(a, args, m)`,
+		`reg.AddReadOnlyEntity(&Health{}, func() model.Model { return &Health{} }, func(a crud.CurrentUser, args crud.ReadArgs, filter model.Model) (model.ModelSlice, error) {`,
+		`return (&Health{}).Read(a, filter.(*Health), args, m)`,
 	)
 }
 

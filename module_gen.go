@@ -193,5 +193,5 @@ func renderStoredEntity(b *strings.Builder, e StructInfo) {
 }
 
 func renderReport(b *strings.Builder, e StructInfo) {
-	b.WriteString(fmt.Sprintf("\treg.AddReadOnlyEntity(&%s{}, nil, func(a crud.CurrentUser, args crud.ReadArgs, _ model.Model) (model.ModelSlice, error) {\n\t\treturn (&%s{}).Read(a, args, m)\n\t})\n", e.Name, e.Name))
+	b.WriteString(fmt.Sprintf("\treg.AddReadOnlyEntity(&%s{}, func() model.Model { return &%s{} }, func(a crud.CurrentUser, args crud.ReadArgs, filter model.Model) (model.ModelSlice, error) {\n\t\treturn (&%s{}).Read(a, filter.(*%s), args, m)\n\t})\n", e.Name, e.Name, e.Name, e.Name))
 }

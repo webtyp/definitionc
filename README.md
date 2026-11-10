@@ -76,7 +76,7 @@ The signatures are fixed:
 | update | `rule_patient_update.go` | `func (next *Patient) Update(a crud.CurrentUser, tx crud.Tx, old *Patient, fields []string, m *Module) (crud.RuleAnswer, error)` |
 | delete | `rule_patient_delete.go` | `func (p *Patient) Delete(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswer, error)` |
 | search (table, `Rules.Read: AddMyBusinessRule`) | `rule_patient_search.go` | `func (p *Patient) Search(a crud.CurrentUser, filter *Patient, text string, m *Module) ([]storage.Condition, error)` |
-| read (model without a table, `Rules.Read: AddMyBusinessRule`) | `rule_health_read.go` | `func (p *Health) Read(a crud.CurrentUser, args crud.ReadArgs, m *Module) (model.ModelSlice, error)` |
+| read (model without a table, `Rules.Read: AddMyBusinessRule`) | `rule_health_read.go` | `func (p *Health) Read(a crud.CurrentUser, filter *Health, args crud.ReadArgs, m *Module) (model.ModelSlice, error)` |
 
 - `Search` is called on a zero record (`(&Patient{}).Search(…)`): it uses no record data. `filter` carries only the fields the caller sent (the entity is its own filter), and `text` is `""` when none was sent.
 - A table read declared `model.HaveNoBusinessRule` is crud's default read: id, search by the item label, page, cap and tenant.
