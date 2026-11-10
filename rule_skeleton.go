@@ -157,9 +157,9 @@ import (
 	"webtyp.com/storage"
 )
 
-// Search traduce el texto que escribió la persona en las condiciones que buscan {{entity}}. Solo condiciones unidas con AND (nunca OR).
-// crud ya aplicó el tope de página, el cursor y la clínica; tú solo dices qué filas corresponden al texto.
-func (p *{{type}}) Search(a crud.CurrentUser, text string, m *Module) ([]storage.Condition, error) {
+// Search traduce el texto que escribió la persona y los campos que envió (filter) en las condiciones que buscan {{entity}}. Solo condiciones unidas con AND (nunca OR).
+// crud ya aplicó el tope de página, el cursor y la clínica; tú solo dices qué filas corresponden. text es "" cuando no se envió texto.
+func (p *{{type}}) Search(a crud.CurrentUser, filter *{{type}}, text string, m *Module) ([]storage.Condition, error) {
 	// COMPLETA TU REGLA DE NEGOCIO AQUÍ (buscar {{entity}} por texto) y termina con: return conditions, rejected
 	var conditions []storage.Condition // las condiciones que corresponden al texto
 	var rejected error                 // el rechazo de tu regla; nil si todo está bien

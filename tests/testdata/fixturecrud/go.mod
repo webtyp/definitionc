@@ -3,7 +3,7 @@ module webtyp.com/definitionc/tests/fixturecrud
 go 1.26.8
 
 require (
-	webtyp.com/crud v0.0.9
+	webtyp.com/crud v0.0.10
 	webtyp.com/input v0.0.36
 	webtyp.com/model v0.2.18
 	webtyp.com/orm v0.12.30

@@ -41,7 +41,8 @@ func TestModule_MountsAStoredEntity(t *testing.T) {
 		`Rules: PatientModel.Rules,`,
 		`return rec.(*Patient).Create(a, tx, m)`,
 		`return next.(*Patient).Update(a, tx, old.(*Patient), fields, m)`,
-		`return (&Patient{}).Search(a, text, m)`,
+		`Search: func(a crud.CurrentUser, filter model.Model, text string) ([]storage.Condition, error) {`,
+		`return (&Patient{}).Search(a, filter.(*Patient), text, m)`,
 	)
 	if strings.Contains(got, "Delete:") {
 		t.Errorf("an entity without Delete mounts a Delete hook:\n%s", got)

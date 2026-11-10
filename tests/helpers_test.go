@@ -15,7 +15,7 @@ import (
 func generate(t *testing.T, definition string, extra ...file) (dir string, err error) {
 	t.Helper()
 	dir = t.TempDir()
-	write(t, dir, "go.mod", "module example.com/mod\n\ngo 1.26.8\n\nrequire webtyp.com/crud v0.0.7\n")
+	write(t, dir, "go.mod", "module example.com/mod\n\ngo 1.26.8\n\nrequire webtyp.com/crud v0.0.10\n")
 	write(t, dir, "definition.go", definition)
 	for _, f := range extra {
 		write(t, dir, f.name, f.body)

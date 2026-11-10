@@ -187,7 +187,7 @@ func renderStoredEntity(b *strings.Builder, e StructInfo) {
 		b.WriteString(fmt.Sprintf("\t\tDelete: func(a crud.CurrentUser, tx crud.Tx, rec model.Model) (crud.RuleAnswer, error) {\n\t\t\treturn rec.(*%s).Delete(a, tx, m)\n\t\t},\n", n))
 	}
 	if e.Rules.Read == domain {
-		b.WriteString(fmt.Sprintf("\t\tSearch: func(a crud.CurrentUser, text string) ([]storage.Condition, error) {\n\t\t\treturn (&%s{}).Search(a, text, m)\n\t\t},\n", n))
+		b.WriteString(fmt.Sprintf("\t\tSearch: func(a crud.CurrentUser, filter model.Model, text string) ([]storage.Condition, error) {\n\t\t\treturn (&%s{}).Search(a, filter.(*%s), text, m)\n\t\t},\n", n, n))
 	}
 	b.WriteString("\t})\n")
 }
