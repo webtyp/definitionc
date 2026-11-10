@@ -166,3 +166,33 @@ func TestSkeleton_UsesTheModelName(t *testing.T) {
 		t.Error("the skeleton does not name the Go struct VisitNote")
 	}
 }
+
+func TestSkeleton_CallSkeletonCreated(t *testing.T) {
+	dir, err := generate(t, paymentDefWithCalls, file{"module.go", moduleType})
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	for _, name := range []string{"call_payment_charge.go", "call_payment_receipt.go"} {
+		if !exists(dir, name) {
+			t.Fatalf("%s was not created", name)
+		}
+	}
+	content := read(t, dir, "call_payment_charge.go")
+	if !strings.Contains(content, "// Charge es la llamada externa") {
+		t.Errorf("call skeleton missing method doc: %s", content)
+	}
+	if !strings.Contains(content, "func (p *Payment) Charge(a crud.CurrentUser, m *Module, key crud.IdempotencyKey) (crud.FieldsToSave, error)") {
+		t.Errorf("call skeleton missing Charge method signature: %s", content)
+	}
+}
+
+func TestSkeleton_CommentDoesNotUseConstant(t *testing.T) {
+	dir, err := generate(t, patientDef, file{"module.go", moduleType})
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	content := read(t, dir, "rule_patient_create.go")
+	if !strings.Contains(content, "crud.ApplyAndPublish()") || !strings.Contains(content, "crud.ApplyWithoutPublishing()") {
+		t.Errorf("skeleton comment should use function form: %s", content)
+	}
+}

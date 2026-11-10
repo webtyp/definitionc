@@ -84,6 +84,15 @@ The signatures are fixed:
   leave a rule behind silently.
 - A model with a `Wire` format may only be read, through its own rule (`rule_<name>_read.go`).
 
+### External Calls
+
+When an entity declares `ExternalCalls: []model.ExternalCallDefinition{...}`:
+- `definitionc` generates one call type per declaration: `type <Entity><Call> struct{}` implementing `crud.ExternalCall` (`ModelName() string`). Rules return these in `crud.ApplyAndPublish(calls...)`.
+- In `definition_gen.go`, it adds `ExternalCalls: <Entity>Model.ExternalCalls` and wires `Calls: map[string]crud.ExternalCallFunc` to delegate to `<Entity>.<Call>(a, m, key)`.
+- It writes a call skeleton `call_<entity>_<call>.go` with signature:
+  `func (p *<Entity>) <Call>(a crud.CurrentUser, m *Module, key crud.IdempotencyKey) (crud.FieldsToSave, error)`
+  Like rule skeletons, the call skeleton does not compile until completed.
+
 `definitionc` writes `ModelName()`, `Definition()` and `MountOperations(reg)` in `definition_gen.go`. It never writes
 `Module`, `New` or the `Store<Entity>()` methods: those are the module's own code.
 

@@ -80,6 +80,7 @@ type StructInfo struct {
 	Allow             uint8
 	Rules             RulesInfo // Definition.Rules as written
 	MFA               uint8     // Definition.MFA as written (a set of actions)
+	ExternalCalls     []model.ExternalCallDefinition
 	SourceFile        string
 }
 

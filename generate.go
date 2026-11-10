@@ -150,6 +150,13 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 			buf.Write(fmt.Sprintf("func (m *%s) Wire() bool { return true }\n\n", info.Name))
 		}
 
+		for _, call := range info.ExternalCalls {
+			callTypeName := info.Name + fmt.Convert(call.Name).CamelUp().String()
+			buf.Write(fmt.Sprintf("// %s is the ExternalCall type for %s.%s.\n", callTypeName, info.ModelName, call.Name))
+			buf.Write(fmt.Sprintf("type %s struct{}\n\n", callTypeName))
+			buf.Write(fmt.Sprintf("func (%s) ModelName() string { return %q }\n\n", callTypeName, info.ModelName+"."+call.Name))
+		}
+
 		if hasExcludedField(info.Fields) {
 			buf.Write(fmt.Sprintf("var _schema%s = []model.Field{\n", info.Name))
 			for _, f := range info.Fields {

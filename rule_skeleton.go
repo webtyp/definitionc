@@ -88,6 +88,8 @@ const (
 	tokPackage = "{{pkg}}"
 	tokType    = "{{type}}"
 	tokEntity  = "{{entity}}"
+	tokMethod  = "{{method}}"
+	tokCall    = "{{call}}"
 )
 
 // skeleton returns the source of the rule file of verb for entity e.
@@ -119,7 +121,7 @@ import "webtyp.com/crud"
 // crud ya validó el esquema, los campos solo del servidor, los límites y el permiso antes de llamarte.
 func (p *{{type}}) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswer, error) {
 	// COMPLETA TU REGLA DE NEGOCIO AQUÍ (crear {{entity}}) y termina con: return decision, rejected
-	var decision crud.RuleAnswer // lo que decides: crud.ApplyAndPublish guarda y avisa; crud.ApplyWithoutPublishing guarda sin avisar
+	var decision crud.RuleAnswer // lo que decides: crud.ApplyAndPublish() guarda y avisa; crud.ApplyWithoutPublishing() guarda sin avisar
 	var rejected error       // el rechazo de tu regla; nil si todo está bien
 }
 `
@@ -132,7 +134,7 @@ import "webtyp.com/crud"
 // crud ya validó el esquema, los campos solo del servidor, los límites y el permiso antes de llamarte.
 func (next *{{type}}) Update(a crud.CurrentUser, tx crud.Tx, old *{{type}}, fields []string, m *Module) (crud.RuleAnswer, error) {
 	// COMPLETA TU REGLA DE NEGOCIO AQUÍ (actualizar {{entity}}) y termina con: return decision, rejected
-	var decision crud.RuleAnswer // lo que decides: crud.ApplyAndPublish guarda y avisa; crud.ApplyWithoutPublishing guarda sin avisar
+	var decision crud.RuleAnswer // lo que decides: crud.ApplyAndPublish() guarda y avisa; crud.ApplyWithoutPublishing() guarda sin avisar
 	var rejected error       // el rechazo de tu regla; nil si todo está bien
 }
 `
@@ -145,10 +147,65 @@ import "webtyp.com/crud"
 // crud ya validó los ids, los límites y el permiso antes de llamarte.
 func (p *{{type}}) Delete(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswer, error) {
 	// COMPLETA TU REGLA DE NEGOCIO AQUÍ (borrar {{entity}}) y termina con: return decision, rejected
-	var decision crud.RuleAnswer // lo que decides: crud.ApplyAndPublish borra y avisa; crud.ApplyWithoutPublishing borra sin avisar
+	var decision crud.RuleAnswer // lo que decides: crud.ApplyAndPublish() borra y avisa; crud.ApplyWithoutPublishing() borra sin avisar
 	var rejected error       // el rechazo de tu regla; nil si todo está bien
 }
 `
+
+const skeletonCall = `package {{pkg}}
+
+import "webtyp.com/crud"
+
+// {{method}} es la llamada externa de {{entity}} ({{call}}): llama al sistema externo usando key como clave de idempotencia.
+// crud guarda los campos devueltos en el registro y reintenta o marca según el modo.
+func (p *{{type}}) {{method}}(a crud.CurrentUser, m *Module, key crud.IdempotencyKey) (crud.FieldsToSave, error) {
+	// COMPLETA TU LLAMADA EXTERNA AQUÍ ({{call}} {{entity}}) y termina con: return fields, failure
+	var fields crud.FieldsToSave // los campos que crud guarda después de la respuesta: crud.Fields(...)
+	var failure error            // el fallo del proveedor; crud lo reintenta o marca según el modo
+}
+`
+
+func callFile(entity, call string) string { return "call_" + entity + "_" + call + ".go" }
+
+func callSkeleton(e StructInfo, call string) string {
+	methodName := fmt.Convert(call).CamelUp().String()
+	return strings.NewReplacer(
+		tokPackage, e.PackageName,
+		tokType, e.Name,
+		tokEntity, e.ModelName,
+		tokMethod, methodName,
+		tokCall, call,
+	).Replace(skeletonCall)
+}
+
+func writeCallSkeletons(entities []StructInfo, dir string) error {
+	declaredCalls := make(map[string]bool)
+	for _, e := range entities {
+		for _, call := range e.ExternalCalls {
+			fileName := callFile(e.ModelName, call.Name)
+			declaredCalls[fileName] = true
+			path := filepath.Join(dir, fileName)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				if err := os.WriteFile(path, []byte(callSkeleton(e, call.Name)), 0o644); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		fn := f.Name()
+		if strings.HasPrefix(fn, "call_") && strings.HasSuffix(fn, ".go") && !strings.HasSuffix(fn, "_test.go") {
+			if !declaredCalls[fn] {
+				return fmt.Errf("%s exists but no entity declares this external call in ExternalCalls; declare it, or delete the file", fn)
+			}
+		}
+	}
+	return nil
+}
 
 const skeletonSearch = `package {{pkg}}
 

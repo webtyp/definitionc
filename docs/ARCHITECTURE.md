@@ -119,6 +119,14 @@ the developer's from then on: `definitionc` never rewrites it, and a deleted fil
 for an action that is not declared `AddMyBusinessRule` is an error. An action declared `model.HaveNoBusinessRule` creates
 no file and mounts no hook. The signatures are listed in the [README](../README.md#3-the-rule-signatures).
 
+### Call skeletons
+
+For every call declared in `model.Definition.ExternalCalls`, `definitionc` creates `call_<entity>_<call>.go` once.
+Like rule skeletons, the file is never overwritten once written, and an existing call file for an undeclared call is
+an error. It carries the signature:
+`func (p *<Entity>) <Call>(a crud.CurrentUser, m *Module, key crud.IdempotencyKey) (crud.FieldsToSave, error)`
+and leaves variables unreturned so the module does not compile until the call is completed.
+
 ### Why a skeleton does not compile
 
 The skeleton declares its outputs (`var decision crud.RuleAnswer`, `var rejected error`) and returns nothing. The Go

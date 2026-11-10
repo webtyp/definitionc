@@ -54,7 +54,10 @@ func (o *Generator) finishModule(code moduleCode, sourceFile string) error {
 	if code.info == nil {
 		return nil
 	}
-	return writeRuleSkeletons(code.entities, filepath.Dir(sourceFile))
+	if err := writeRuleSkeletons(code.entities, filepath.Dir(sourceFile)); err != nil {
+		return err
+	}
+	return writeCallSkeletons(code.entities, filepath.Dir(sourceFile))
 }
 
 // moduleImports is every package renderModule's text names: crud always, storage when a table has a Search rule.
@@ -188,6 +191,17 @@ func renderStoredEntity(b *strings.Builder, e StructInfo) {
 	}
 	if e.Rules.Read == domain {
 		b.WriteString(fmt.Sprintf("\t\tSearch: func(a crud.CurrentUser, filter model.Model, text string) ([]storage.Condition, error) {\n\t\t\treturn (&%s{}).Search(a, filter.(*%s), text, m)\n\t\t},\n", n, n))
+	}
+	if len(e.ExternalCalls) > 0 {
+		b.WriteString(fmt.Sprintf("\t\tExternalCalls: %sModel.ExternalCalls,\n", n))
+		b.WriteString("\t\tCalls: map[string]crud.ExternalCallFunc{\n")
+		for _, call := range e.ExternalCalls {
+			methodName := fmt.Convert(call.Name).CamelUp().String()
+			b.WriteString(fmt.Sprintf("\t\t\t%q: func(a crud.CurrentUser, rec model.Model, key crud.IdempotencyKey) (crud.FieldsToSave, error) {\n", call.Name))
+			b.WriteString(fmt.Sprintf("\t\t\t\treturn rec.(*%s).%s(a, m, key)\n", n, methodName))
+			b.WriteString("\t\t\t},\n")
+		}
+		b.WriteString("\t\t},\n")
 	}
 	b.WriteString("\t})\n")
 }

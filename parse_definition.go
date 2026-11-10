@@ -121,6 +121,12 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 				return nil, err
 			}
 			info.Fields = fields
+		case "ExternalCalls":
+			calls, err := parseExternalCalls(varName, kv.Value)
+			if err != nil {
+				return nil, err
+			}
+			info.ExternalCalls = calls
 		}
 	}
 
@@ -146,8 +152,11 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 			return nil, fmt.Errf("%s: only model.Read can be allowed on a model without a key field; Create/Update/Delete need a primary key declared with DB (a table, or a resource served by the module's own crud.Store)", varName)
 		}
 	}
-	def := model.Definition{Name: info.ModelName, Wire: info.Wire, Allow: model.Action(info.Allow), Rules: info.Rules.modelRules(), MFA: model.Action(info.MFA)}
+	def := model.Definition{Name: info.ModelName, Wire: info.Wire, Allow: model.Action(info.Allow), Rules: info.Rules.modelRules(), MFA: model.Action(info.MFA), ExternalCalls: info.ExternalCalls}
 	if err := definitioncheck.CheckRules(def); err != nil {
+		return nil, fmt.Errf("%s: %s", varName, err.Error())
+	}
+	if err := def.ValidateExternalCalls(); err != nil {
 		return nil, fmt.Errf("%s: %s", varName, err.Error())
 	}
 	if info.NoDB && !info.Wire && info.Allow == uint8(model.Read) && info.Rules.Read != uint8(model.AddMyBusinessRule) {
@@ -582,4 +591,63 @@ func validateItem(varName string, fields []FieldInfo) error {
 		return fmt.Err(varName + ": " + err.Error())
 	}
 	return nil
+}
+
+func parseExternalCalls(varName string, expr ast.Expr) ([]model.ExternalCallDefinition, error) {
+	cl, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return nil, fmt.Errf("%s: ExternalCalls must be a slice literal []model.ExternalCallDefinition{...}", varName)
+	}
+	var out []model.ExternalCallDefinition
+	for _, elt := range cl.Elts {
+		itemCl, ok := elt.(*ast.CompositeLit)
+		if !ok {
+			continue
+		}
+		var def model.ExternalCallDefinition
+		for _, itemElt := range itemCl.Elts {
+			kv, ok := itemElt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key := exprToString(kv.Key)
+			switch key {
+			case "Name":
+				if lit, ok := kv.Value.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+					val, _ := strconv.Unquote(lit.Value)
+					def.Name = val
+				}
+			case "Mode":
+				modeName := ""
+				if sel, ok := kv.Value.(*ast.SelectorExpr); ok {
+					modeName = sel.Sel.Name
+				} else if id, ok := kv.Value.(*ast.Ident); ok {
+					modeName = id.Name
+				}
+				switch modeName {
+				case "WaitForReply":
+					def.Mode = model.WaitForReply
+				case "RetryInBackground":
+					def.Mode = model.RetryInBackground
+				case "WaitForConfirmation":
+					def.Mode = model.WaitForConfirmation
+				}
+			case "MaxWaitSeconds":
+				if lit, ok := kv.Value.(*ast.BasicLit); ok && lit.Kind == token.INT {
+					v, _ := strconv.ParseInt(lit.Value, 10, 64)
+					def.MaxWaitSeconds = v
+				}
+			case "MaxAttempts":
+				if lit, ok := kv.Value.(*ast.BasicLit); ok && lit.Kind == token.INT {
+					v, _ := strconv.ParseInt(lit.Value, 10, 64)
+					def.MaxAttempts = v
+				}
+			}
+		}
+		if err := def.Validate(); err != nil {
+			return nil, fmt.Errf("%s: %s", varName, err.Error())
+		}
+		out = append(out, def)
+	}
+	return out, nil
 }

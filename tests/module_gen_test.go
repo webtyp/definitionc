@@ -248,3 +248,47 @@ func TestModule_NoAllowNoRuleFile(t *testing.T) {
 		}
 	}
 }
+
+const paymentDefWithCalls = `package mod
+
+import (
+	"webtyp.com/model"
+)
+
+var Definition = model.ModuleDefinition{
+	Name: "payment_manager",
+	Entities: []model.Definition{
+		PaymentModel,
+	},
+}
+
+var PaymentModel = model.Definition{
+	Name:  "payment",
+	Allow: model.Create | model.Read,
+	Rules: model.Rules{Create: model.AddMyBusinessRule, Read: model.HaveNoBusinessRule},
+	ExternalCalls: []model.ExternalCallDefinition{
+		{Name: "charge", Mode: model.WaitForReply, MaxWaitSeconds: 10},
+		{Name: "receipt", Mode: model.RetryInBackground, MaxAttempts: 5},
+	},
+	Fields: model.Fields{
+		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}},
+		{Name: "amount", Type: model.Int()},
+	},
+}
+`
+
+func TestModule_ExternalCallsGeneratesTypeAndRunnerTable(t *testing.T) {
+	got := moduleOutput(t, paymentDefWithCalls)
+	wantContains(t, got,
+		`type PaymentCharge struct{}`,
+		`func (PaymentCharge) ModelName() string { return "payment.charge" }`,
+		`type PaymentReceipt struct{}`,
+		`func (PaymentReceipt) ModelName() string { return "payment.receipt" }`,
+		`ExternalCalls: PaymentModel.ExternalCalls,`,
+		`Calls: map[string]crud.ExternalCallFunc{`,
+		`"charge": func(a crud.CurrentUser, rec model.Model, key crud.IdempotencyKey) (crud.FieldsToSave, error) {`,
+		`return rec.(*Payment).Charge(a, m, key)`,
+		`"receipt": func(a crud.CurrentUser, rec model.Model, key crud.IdempotencyKey) (crud.FieldsToSave, error) {`,
+		`return rec.(*Payment).Receipt(a, m, key)`,
+	)
+}

@@ -33,6 +33,7 @@
 | `TestModule_TwoEntities` | one mount per entity, in the order of `Entities` |
 | `TestModule_InternalEntityIsListedButNotMounted` | an entity that allows nothing is listed but not mounted |
 | `TestModule_NoAllowNoRuleFile` | an entity that allows nothing creates no rule file and no mount |
+| `TestModule_ExternalCallsGeneratesTypeAndRunnerTable` | ExternalCalls generates call types and the Runner table on StoredEntity |
 | `TestModule_NoDefinitionNoModuleCode` | without `var Definition` there is no module code, and a legacy `definition_crud.go` is removed |
 | `TestModule_EntityNotListedIsAnError` | an entity that allows actions must be listed in `Entities` |
 | `TestModule_UnknownHandlerIsAnError` | a listed handler must be a declared model |
@@ -64,6 +65,8 @@
 | `TestSkeleton_DeletedFileIsRecreated` | a deleted rule file is recreated as a skeleton |
 | `TestSkeleton_OrphanRuleFileIsAnError` | a rule file for an action that is not declared is an error |
 | `TestSkeleton_UsesTheModelName` | the rule file takes the entity's model name, not its Go name |
+| `TestSkeleton_CallSkeletonCreated` | call_<entity>_<call>.go is created for declared external calls |
+| `TestSkeleton_CommentDoesNotUseConstant` | skeleton comments use ApplyAndPublish() and ApplyWithoutPublishing() function forms |
 
 ## Generator, parser and scanner (root package)
 
