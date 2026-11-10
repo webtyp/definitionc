@@ -76,7 +76,29 @@ type StructInfo struct {
 	NoDB              bool
 	Wire              bool // model.Definition{Wire: true}: a transport format, never a form
 	Allow             uint8
+	Rules             RulesInfo // Definition.Rules as written
+	MFA               uint8     // Definition.MFA as written (a set of actions)
 	SourceFile        string
+}
+
+// RulesInfo is Definition.Rules as written in definition.go: for each action the value of model.RuleMode (0 = undeclared).
+type RulesInfo struct {
+	Create, Read, Update, Delete uint8
+}
+
+// modelRules converts what was parsed into the model type, so definitioncheck.CheckRules is the one judge of a declaration.
+func (r RulesInfo) modelRules() model.Rules {
+	return model.Rules{
+		Create: model.RuleMode(r.Create), Read: model.RuleMode(r.Read),
+		Update: model.RuleMode(r.Update), Delete: model.RuleMode(r.Delete),
+	}
+}
+
+// ModuleInfo is `var Definition = model.ModuleDefinition{…}` as written in definition.go.
+type ModuleInfo struct {
+	Name     string   // Definition.Name, e.g. "patient_directory"
+	Package  string   // the Go package of definition.go
+	Entities []string // the struct name of each listed model (PatientModel → "Patient"), in the order written
 }
 
 // buildAliasMap scans all .go files in dir and returns a map of

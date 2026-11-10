@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"webtyp.com/definitioncheck"
 	"webtyp.com/fmt"
 	"webtyp.com/model"
 )
@@ -97,11 +98,23 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 				info.Wire = true
 			}
 		case "Allow":
-			allow, err := parseAllow(varName, kv.Value)
+			allow, err := parseAllow(varName, "Allow", kv.Value)
 			if err != nil {
 				return nil, err
 			}
 			info.Allow = allow
+		case "MFA":
+			mfa, err := parseAllow(varName, "MFA", kv.Value)
+			if err != nil {
+				return nil, err
+			}
+			info.MFA = mfa
+		case "Rules":
+			rules, err := parseRules(varName, kv.Value)
+			if err != nil {
+				return nil, err
+			}
+			info.Rules = rules
 		case "Fields":
 			fields, err := g.parseFields(kv.Value)
 			if err != nil {
@@ -128,13 +141,17 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 	}
 	info.NoDB = !hasDB
 
-	if info.Wire && info.Allow != 0 {
-		return nil, fmt.Errf("%s: a Wire definition cannot Allow table actions", varName)
-	}
 	if info.NoDB && info.Allow != 0 {
 		if info.Allow != uint8(model.Read) {
 			return nil, fmt.Errf("%s: only model.Read can be allowed on a model without a key field; Create/Update/Delete need a primary key declared with DB (a table, or a resource served by the module's own crud.Store)", varName)
 		}
+	}
+	def := model.Definition{Name: info.ModelName, Wire: info.Wire, Allow: model.Action(info.Allow), Rules: info.Rules.modelRules(), MFA: model.Action(info.MFA)}
+	if err := definitioncheck.CheckRules(def); err != nil {
+		return nil, fmt.Errf("%s: %s", varName, err.Error())
+	}
+	if info.NoDB && !info.Wire && info.Allow == uint8(model.Read) && info.Rules.Read != uint8(model.AddMyBusinessRule) {
+		return nil, fmt.Errf("%s: a model without a table has no default read; declare Rules: model.Rules{Read: model.AddMyBusinessRule} and write its rule", varName)
 	}
 	if (!info.NoDB || info.Allow == uint8(model.Read)) && !info.Wire {
 		for _, f := range info.Fields {
@@ -147,7 +164,8 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 	return info, nil
 }
 
-func parseAllow(varName string, expr ast.Expr) (uint8, error) {
+// parseAllow reads a set of actions (model.Create | model.Read | …) written in field of varName.
+func parseAllow(varName, field string, expr ast.Expr) (uint8, error) {
 	switch t := expr.(type) {
 	case *ast.SelectorExpr:
 		switch t.Sel.Name {
@@ -160,23 +178,67 @@ func parseAllow(varName string, expr ast.Expr) (uint8, error) {
 		case "Delete":
 			return uint8(model.Delete), nil
 		}
-		return 0, fmt.Errf("field Allow of %s: write it as model.Create | model.Read | … (constants only)", varName)
+		return 0, fmt.Errf("field %s of %s: write it as model.Create | model.Read | … (constants only)", field, varName)
 	case *ast.BinaryExpr:
 		if t.Op != token.OR {
-			return 0, fmt.Errf("field Allow of %s: write it as model.Create | model.Read | … (constants only)", varName)
+			return 0, fmt.Errf("field %s of %s: write it as model.Create | model.Read | … (constants only)", field, varName)
 		}
-		left, err := parseAllow(varName, t.X)
+		left, err := parseAllow(varName, field, t.X)
 		if err != nil {
 			return 0, err
 		}
-		right, err := parseAllow(varName, t.Y)
+		right, err := parseAllow(varName, field, t.Y)
 		if err != nil {
 			return 0, err
 		}
 		return left | right, nil
 	default:
-		return 0, fmt.Errf("field Allow of %s: write it as model.Create | model.Read | … (constants only)", varName)
+		return 0, fmt.Errf("field %s of %s: write it as model.Create | model.Read | … (constants only)", field, varName)
 	}
+}
+
+const errRulesShape = "field Rules of %s: write it as model.Rules{Create: model.AddMyBusinessRule, Read: model.HaveNoBusinessRule, …} (constants only)"
+
+// parseRules reads the Rules literal of varName: one RuleMode per action, written as a constant.
+func parseRules(varName string, expr ast.Expr) (RulesInfo, error) {
+	cl, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return RulesInfo{}, fmt.Errf(errRulesShape, varName)
+	}
+	var r RulesInfo
+	for _, elt := range cl.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			return RulesInfo{}, fmt.Errf(errRulesShape, varName)
+		}
+		mode, err := parseRuleMode(varName, kv.Value)
+		if err != nil {
+			return RulesInfo{}, err
+		}
+		switch key := exprToString(kv.Key); key {
+		case "Create":
+			r.Create = mode
+		case "Read":
+			r.Read = mode
+		case "Update":
+			r.Update = mode
+		case "Delete":
+			r.Delete = mode
+		default:
+			return RulesInfo{}, fmt.Errf("field Rules of %s: %s is not an action; use Create, Read, Update or Delete", varName, key)
+		}
+	}
+	return r, nil
+}
+
+func parseRuleMode(varName string, expr ast.Expr) (uint8, error) {
+	switch exprToString(expr) {
+	case "model.AddMyBusinessRule":
+		return uint8(model.AddMyBusinessRule), nil
+	case "model.HaveNoBusinessRule":
+		return uint8(model.HaveNoBusinessRule), nil
+	}
+	return 0, fmt.Errf("field Rules of %s: write model.AddMyBusinessRule or model.HaveNoBusinessRule (constants only), got %s", varName, exprToString(expr))
 }
 
 func (g *Generator) parseFields(expr ast.Expr) ([]FieldInfo, error) {
