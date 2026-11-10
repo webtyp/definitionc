@@ -374,6 +374,8 @@ func (g *Generator) parseDBField(expr ast.Expr, fi *FieldInfo) {
 			fi.PK = exprToBool(kv.Value)
 		case "Unique":
 			fi.Unique = exprToBool(kv.Value)
+		case "Revision":
+			fi.Revision = exprToBool(kv.Value)
 		case "AutoInc":
 			fi.AutoInc = exprToBool(kv.Value)
 		case "RefColumn":

@@ -44,6 +44,14 @@
 | `TestGenerate_CompositeItemID` | a composite key is joined with `model.JoinKey` in `Item()` |
 | `TestGenerate_NoBuildTag` | the generated module file carries no build tag |
 
+## Revision field (`revision_test.go`)
+
+| Test | Proves |
+|---|---|
+| `TestRevision_IsCopiedToTheGeneratedSchema` | `Revision: true` is written into the generated schema literal of its field |
+| `TestRevision_AbsentIsNotWritten` | a definition without a revision field generates none |
+| `TestRevision_BadRevisionIsRefused` | a `Revision` field that is not an integer is refused |
+
 ## Rule skeletons (`rule_skeleton_test.go`)
 
 | Test | Proves |

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"webtyp.com/definitioncheck"
 	"webtyp.com/fmt"
 )
 
@@ -42,6 +43,7 @@ type FieldInfo struct {
 	KindArgIdents   []string // bare identifiers passed as direct arguments to the constructor call
 	PK              bool
 	Unique          bool
+	Revision        bool // the integer column that counts the row's updates (model.FieldDB.Revision)
 	NotNull         bool
 	AutoInc         bool
 	Ref             string
@@ -385,13 +387,27 @@ func (s StructInfo) asFields() []model.Field {
 			NotNull:   f.NotNull,
 			OmitEmpty: f.OmitEmpty,
 			DB: &model.FieldDB{
-				PK:      f.PK,
-				Unique:  f.Unique,
-				AutoInc: f.AutoInc,
+				PK:       f.PK,
+				Unique:   f.Unique,
+				AutoInc:  f.AutoInc,
+				Revision: f.Revision,
 			},
 		}
 	}
 	return fields
+}
+
+// checkResolved runs definitioncheck.CheckRules on a model once its field kinds are resolved, so the checks that read
+// the field types (a Revision field must be an integer) see them. The rules themselves were judged at parse time.
+func checkResolved(info StructInfo) error {
+	def := model.Definition{
+		Name: info.ModelName, Fields: info.asFields(), Wire: info.Wire,
+		Allow: model.Action(info.Allow), Rules: info.Rules.modelRules(), MFA: model.Action(info.MFA),
+	}
+	if err := definitioncheck.CheckRules(def); err != nil {
+		return fmt.Errf("%s: %s", info.Name+"Model", err.Error())
+	}
+	return nil
 }
 
 // collectAllStructs walks rootDir and returns a map of all parsed StructInfo
@@ -428,6 +444,11 @@ func (g *Generator) collectAllStructs() (map[string]StructInfo, []string, []stri
 			}
 			if err := g.resolveStorage(infos, node); err != nil {
 				return err
+			}
+			for _, info := range infos {
+				if err := checkResolved(info); err != nil {
+					return err
+				}
 			}
 
 			for _, info := range infos {

@@ -158,7 +158,7 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 				}
 
 				buf.Write(fmt.Sprintf("\t\t{Name: \"%s\", Type: %s", f.ColumnName, f.KindConstructor))
-				if !info.NoDB && (f.PK || f.Unique || f.AutoInc) {
+				if !info.NoDB && (f.PK || f.Unique || f.AutoInc || f.Revision) {
 					buf.Write(", DB: &model.FieldDB{")
 					var parts []string
 					if f.PK {
@@ -169,6 +169,9 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 					}
 					if f.AutoInc {
 						parts = append(parts, "AutoInc: true")
+					}
+					if f.Revision {
+						parts = append(parts, "Revision: true")
 					}
 					buf.Write(fmt.Convert(parts).Join(", ").String())
 					buf.Write("}")
@@ -560,8 +563,8 @@ func newModelStub(info StructInfo, defs []StructInfo) *modelStub {
 		if f.Options != "" {
 			field.Options = &model.Definition{Name: refTable(f.Options, info.SourceFile, defs)}
 		}
-		if f.PK || f.Unique || f.AutoInc {
-			field.DB = &model.FieldDB{PK: f.PK, Unique: f.Unique, AutoInc: f.AutoInc}
+		if f.PK || f.Unique || f.AutoInc || f.Revision {
+			field.DB = &model.FieldDB{PK: f.PK, Unique: f.Unique, AutoInc: f.AutoInc, Revision: f.Revision}
 		}
 		if f.Maximum > 0 {
 			if field.DB == nil {
