@@ -455,15 +455,17 @@ func (g *Generator) generateAll(all map[string]StructInfo, structOrder []string,
 		byFile[info.SourceFile] = append(byFile[info.SourceFile], info)
 	}
 
+	// Every file is attempted; the first failure is returned, so a bad module is never reported as success.
+	var first error
 	for _, sourceFile := range fileOrder {
 		infos := byFile[sourceFile]
 		if len(infos) > 0 {
-			if err := g.GenerateForFile(infos, sourceFile); err != nil {
-				g.log(fmt.Sprintf("Failed to write output for %s: %v", sourceFile, err))
+			if err := g.GenerateForFile(infos, sourceFile); err != nil && first == nil {
+				first = fmt.Errf("%s: %s", sourceFile, err.Error())
 			}
 		}
 	}
-	return nil
+	return first
 }
 
 // Run is the entry point for the CLI tool.

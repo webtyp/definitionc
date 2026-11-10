@@ -42,6 +42,10 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 	if err != nil {
 		return err
 	}
+	code, err := o.moduleCode(infos, sourceFile)
+	if err != nil {
+		return err
+	}
 	buf := fmt.Convert()
 
 	// File Header
@@ -101,6 +105,9 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 		}
 	}
 
+	for _, path := range code.imports {
+		kindImports[path] = ""
+	}
 	buf.Write("import (\n")
 	buf.Write("\t\"webtyp.com/model\"\n")
 	if hasORM {
@@ -441,11 +448,12 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 		}
 	}
 
+	buf.Write(code.body)
 	outName := fmt.Convert(sourceFile).TrimSuffix(".go").String() + GeneratedSuffix
 	if err := os.WriteFile(outName, buf.Bytes(), 0644); err != nil {
 		return err
 	}
-	return o.writeCrudFile(infos, sourceFile)
+	return o.finishModule(code, sourceFile)
 }
 
 // refTable is the table a foreign key points at. A Definition of the same package is found by its
