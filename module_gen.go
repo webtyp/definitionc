@@ -45,13 +45,16 @@ func (o *Generator) moduleCode(infos []StructInfo, sourceFile string) (moduleCod
 	return moduleCode{info: mod, entities: entities, imports: moduleImports(entities), body: renderModule(mod, entities)}, nil
 }
 
-// finishModule removes the legacy second file of the module.
+// finishModule removes the legacy second file and creates the missing rule skeletons of the module.
 func (o *Generator) finishModule(code moduleCode, sourceFile string) error {
 	legacy := fmt.Convert(sourceFile).TrimSuffix(".go").String() + legacyModuleSuffix
 	if err := os.Remove(legacy); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	return nil
+	if code.info == nil {
+		return nil
+	}
+	return writeRuleSkeletons(code.entities, filepath.Dir(sourceFile))
 }
 
 // moduleImports is every package renderModule's text names: crud always, storage when a table has a Search rule.
