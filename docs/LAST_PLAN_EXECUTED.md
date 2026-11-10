@@ -1,152 +1,110 @@
 ---
-PLAN: "feat!: definitionc generates one Mount<Entity> with typed <Entity>Rules, only for tables that Allow actions"
-EXECUTOR: antigravity
+PLAN: "feat!: definitionc generates the module's MountOperations from model.ModuleDefinition and Rules, and creates one rule skeleton per AddMyBusinessRule action"
+EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 10740115110268957738
 ---
 
 > Read AGENTS.md at the repo root before any change.
-> **Finish by yourself:** when the delivery check passes, commit, push and open the pull request. Never ask whether to
-> proceed or finalize — nobody answers, and a session that waits ends without your work. Commit after every stage.
+> **Finish by yourself:** when the delivery check passes, commit after every stage, push and open the pull request. Never ask whether to
+> proceed or finalize — nobody answers, and a session that waits ends without your work.
 > Never run `git reset`, `git restore`, `git checkout -- <file>` or `git stash` on your own work.
+> This repo is backend tooling: stdlib (`go/ast`, `go/parser`, `go/format`, `os`, `strings`) is legitimate here, do NOT "fix" it to `webtyp/fmt`.
+> Never edit a generated file (`definition_gen.go`) by hand: a build error there means the generator is wrong.
 
-# Plan: `definition_crud.go` = one `Mount<Entity>` per allowed table
+Stage files: [1 tests](PLAN_STAGE_1_TESTS.md) · [2 parsing](PLAN_STAGE_2_PARSING.md) · [3 module file](PLAN_STAGE_3_MODULE_FILE.md) · [4 rule skeletons](PLAN_STAGE_4_SKELETONS.md) · [5 docs](PLAN_STAGE_5_DOCS.md) · [6 revision](PLAN_STAGE_6_REVISION.md).
+
+## Goal
+
+A module is declared once, in `definition.go`:
+
+```go
+var Definition = model.ModuleDefinition{Name: "patient_directory", Entities: []model.Definition{PatientModel}}
+
+var PatientModel = model.Definition{
+	Name:  "patient",
+	Allow: model.Create | model.Read | model.Update,
+	Rules: model.Rules{Create: model.AddMyBusinessRule, Read: model.AddMyBusinessRule, Update: model.AddMyBusinessRule},
+	Fields: …,
+}
+```
+
+From it `definitionc` generates, inside the one `definition_gen.go`, the module's `ModelName()`, `Definition()` and `MountOperations(reg)`; and for every action declared `model.AddMyBusinessRule` it creates once a skeleton
+`rule_<entity>_<verb>.go` that does not compile until the developer (or the LLM) completes it. An action declared `model.HaveNoBusinessRule` generates no file and no hook. The hand-written `ops.go` mounting and the
+old `Mount<Entity>(reg, store, <Entity>Rules)` / `<Entity>Rules` disappear.
+
+What each rule looks like (receiver = the record; `m` = the module, so a rule reaches its `Deps`; the signatures are fixed by decisions D31, D35, D38, D39 of the architecture master):
+
+| Verb | File | Signature |
+|---|---|---|
+| create | `rule_patient_create.go` | `func (p *Patient) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswer, error)` |
+| update | `rule_patient_update.go` | `func (next *Patient) Update(a crud.CurrentUser, tx crud.Tx, old *Patient, fields []string, m *Module) (crud.RuleAnswer, error)` |
+| delete | `rule_patient_delete.go` | `func (p *Patient) Delete(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswer, error)` |
+| search (table, `Rules.Read: AddMyBusinessRule`) | `rule_patient_search.go` | `func (p *Patient) Search(a crud.CurrentUser, text string, m *Module) ([]storage.Condition, error)` |
+| read (model without a table or `Wire`, `Rules.Read: AddMyBusinessRule`) | `rule_health_read.go` | `func (p *Health) Read(a crud.CurrentUser, args crud.ReadArgs, m *Module) (model.ModelSlice, error)` |
+
+`Search` is called on a zero record (`(&Patient{}).Search(…)`): it uses no record data. A `Read` of a table with `Rules.Read: HaveNoBusinessRule` is the default read of `crud` (id, search by the item label, page, cap, tenant).
+
+## Out of scope (other plans / open questions)
+
+- Effects (`crud.Then`, `Definition.Effects`, `effect_*.go`): plan A6.11, after this one.
+- The typed read filter (`NewFilter`) is deleted: nothing in `veltylabs` uses it (decision D42). MFA is now `model.Definition.MFA` (model plan) and the generated `crud.StoredEntity` carries it.
+- The module's `type Module`, `New` and one store method per table entity stay hand-written (`module.go`): `func (m *Module) Store<Entity>() crud.Store` (e.g. `StorePatient`), one line each. One way for every module, with one store or several (decision D42).
+
+## Ecosystem search
+
+Searched `ModuleDefinition`, `Rules`, `rule_`, `MountOperations`, `writeCrudFile` over `webtyp/*` and `veltylabs/*`: `definitionc/crud_gen.go` is the only generator of mounting code (**replace** it); `model.ModuleDefinition`, `model.Rules`, `Definition.CheckRules`, `ModuleDefinition.Check` come from the `model` plan (**reuse**: this repo imports `webtyp.com/model` already and calls `CheckRules` instead of re-implementing it).
+`app` (the dev daemon) calls this Generator on every save of `definition.go` (`NewFileEvent`), so skeletons are created by saving the file; `app` needs no change.
+
+## Design gate
+
+1. **Prior art** (unverified in this session): `protoc`/`sqlc` generate code from one declaration; Rails generators create a file once and never overwrite it.
+2. **Novice-name test**: `rule_patient_create.go` = "rule: create patient".
+3. **Ledger**: concepts +1 (`rule_*.go`) −2 (`<Entity>Rules`, `Mount<Entity>`); files a module writes by hand −1 (`ops.go`), +1 per AddMyBusinessRule action; ways to mount an entity 2 → 1.
+4. **Where**: the generator owns generation; the types live in `model`, the engine in `crud`.
+5. **Deletes**: `crud_gen.go` (`writeCrudFile`, `requiresCrud`), the `Wire` + `Allow` refusal in `parseDefinition`, `tests/crud_gen_test.go`, `tests/testdata/fixturecrud/definition_crud.go` (the file disappears: its content is part of the regenerated `definition_gen.go`).
 
 ## Tools
 
 ```bash
 go install webtyp.com/devflow/cmd/gotest@latest
-go get webtyp.com/model@latest webtyp.com/crud@latest
-(cd tests && go get webtyp.com/crud@latest webtyp.com/model@latest)
-(cd tests/testdata/fixturecrud && go get webtyp.com/crud@latest webtyp.com/model@latest webtyp.com/storage@v0.1.18)
+go install webtyp.com/lang/cmd/langc@latest
 ```
-`crud@latest` must contain `crud.Table`, `crud.Tx`, `Registry.Table` (plan A6.2) and `model@latest` must contain
-`Definition.Allow` (A6.1); if `go doc webtyp.com/crud Table` fails, stop. No `replace` anywhere.
 
-## Why
-
-Decisions D19/D20 of `webtyp/docs/ARCHITECTURE_MASTER_PLAN.md`. Today `crud_gen.go` writes four functions per table entity
-(`Mount<E>Create/Read/Update/Delete`) whether the module uses them or not (`work_schedule`: 16 written, 1 used), and modules
-mount all four and answer the unwanted ones with `"not supported"` stubs. Now `crud` persists the table; `definitionc` writes, only
-for a table whose `model.Definition` sets `Allow`, one `Mount<E>` that builds a `crud.Table` from typed hooks.
+Dependencies (all published, no `replace`): `go get webtyp.com/model@v0.2.18 webtyp.com/definitioncheck@v0.0.3 && go mod tidy`; `tests/go.mod` and `tests/testdata/fixturecrud/go.mod` get the same two lines plus `go get webtyp.com/crud@v0.0.7` (the generated code targets `crud` v0.0.7: `StoredEntity`, `AddStoredEntity`, `AddReadOnlyEntity`, `CurrentUser`, `RuleAnswer`).
+`model` v0.2.18 (defines `Rules`, `RuleMode`, `AddMyBusinessRule`, `HaveNoBusinessRule`, `ModuleDefinition`, `Action.Verb`, `FieldDB.Revision`) and `definitioncheck` v0.0.3 (defines `CheckRules`, `CheckModule`) are published.
 
 ## APIs used
 
-| Symbol | Signature |
-|---|---|
-| `crud.Registry.Table` | `Table(t crud.Table)` |
-| `crud.Table` | `struct{ Model model.Model; NewList func() model.ModelSlice; Store crud.Store; Create func(c Caller, tx Tx, rec model.Model) error; Update func(c Caller, tx Tx, old, next model.Model, fields []string) error; Delete func(c Caller, tx Tx, rec model.Model) error; Search func(c Caller, text string) ([]storage.Condition, error); NewFilter func() model.Model; Committed func(c Caller, action model.Action, rec model.Model, fields []string); MFA model.Action }` |
-| `model.Definition.Allow` | `model.Action` (`model.Create`, `model.Read`, `model.Update`, `model.Delete`, combined with `\|`) |
+| symbol | exact signature | file |
+|---|---|---|
+| `model.RuleMode` | `type RuleMode uint8`; `AddMyBusinessRule` = 1, `HaveNoBusinessRule` = 2, zero = undeclared | `model/rules.go` (model plan) |
+| `model.Rules` | `struct{ Create, Read, Update, Delete RuleMode }` | `model/rules.go` |
+| `model.Definition` | `Name string; Fields Fields; Wire bool; Allow Action; Rules Rules; MFA Action` | `model/definition.go` |
+| `definitioncheck.CheckRules` | `func CheckRules(def model.Definition) error` (undeclared allowed action, orphan rule, MFA outside Allow, Wire model that is not exactly `Read` + `AddMyBusinessRule`) | `model/rules.go` |
+| `model.Action` | `uint8` bit set `Create, Read, Update, Delete`; `String()` → CRUD letters | `model/rbac.go:83` |
+| `Generator`, `StructInfo`, `exprToString`, `parseAllow`, `ToSnakeCase`, `GeneratedHeader`, `GeneratedSuffix`, `DefinitionFile` | this repo: read `generator.go`, `parse_definition.go`, `generate.go:27-446` before editing | |
+| `fmt.Errf` | `webtyp.com/fmt`: formats an error (used in `parse_definition.go`) | `fmt/` |
 
-If a signature differs, stop and name the symbol; never adapt it by guessing.
+If a signature differs from this table, stop and name the symbol in the PR; never adapt it by guessing.
 
-## Stage 1 — parse `Allow` (`parse_definition.go`, `generator.go`)
+## Stages
 
-`StructInfo` gains `Allow uint8` (bit set, same bits as `model.Action`: Create=1, Read=2, Update=4, Delete=8). Parse the
-`Allow` key of a `model.Definition` literal: an `*ast.SelectorExpr` (`model.Read`) or an `*ast.BinaryExpr` with `token.OR`
-of selectors, recursively; the selector names map `Create→1, Read→2, Update→4, Delete→8`. Any other expression →
-error `field Allow of %s: write it as model.Create | model.Read | … (constants only)`. `Allow` with `Wire: true` → error
-`%s: a Wire definition cannot Allow table actions`. A definition with no DB field (a read model: a report or computed view, D18) may set **only** `Allow: model.Read`: it gets
-`Allow()` on the entity and the list (so its screen works with `view.NewCallerLister`) and **no** `Mount` — the module mounts
-it with `crud.Registry.Read`. Any other action on it → error `%s: only model.Read can be allowed on a model without a key field; Create/Update/Delete need
-a primary key declared with DB (a table, or a resource served by the module's own crud.Store)`. A resource served by its own `crud.Store`
-(D21: e.g. `access.RoleRecord`, `auth.LANIdentity`) declares its key with `DB: &model.FieldDB{PK: true}`, so `definitionc` treats it as a table and
-generates its `Mount`; it is simply never listed in `migrate/`.
-
-## Stage 2 — `definition_gen.go`: `Allow()` for every table entity
-
-Next to the other generated methods of each table entity (not Wire, has DB) and of each read model with `Allow: model.Read`:
-```go
-func (*Post) Allow() model.Action     { return PostModel.Allow }
-func (*PostList) Allow() model.Action { return PostModel.Allow } // makes *PostList a model.TableSlice
-```
-A table field named `allow` would collide with the method: error `%s: a field named allow collides with the generated Allow() method; rename the column`.
-
-### Composite keys in `Item()` (D22)
-
-For a table whose schema has more than one `IsPK()` field, the generated `Item()` sets `ID: model.JoinKey(<pk fields in schema order, as text>)`
-(a single key keeps today's `ID`). Test `TestCrudGen_CompositeItemID`: fixture table with PK (room_id, equipment_id) → generated `Item()` contains
-`model.JoinKey(`.
-
-## Stage 3 — `crud_gen.go`: replace the four functions by one
-
-`requiresCrud` unchanged. `tableEntities` = table entities **with `Allow != 0`** (no `Allow` → nothing generated; a package with
-none removes `definition_crud.go`, existing behaviour). For each, write (only the hook fields of allowed actions; `Search`, `NewFilter`
-only when Read is allowed):
-
-```go
-// PostRules are the domain rules of Post. Every hook is optional (nil = no rule) and runs per record inside the transaction;
-// Committed runs after the commit.
-type PostRules struct {
-	Create    func(c crud.Caller, tx crud.Tx, p *Post) error                       // only when Allow has Create
-	Update    func(c crud.Caller, tx crud.Tx, old, next *Post, fields []string) error // only when Allow has Update
-	Delete    func(c crud.Caller, tx crud.Tx, p *Post) error                       // only when Allow has Delete
-	Search    func(c crud.Caller, text string) ([]storage.Condition, error)       // only when Allow has Read
-	NewFilter func() model.Model                                                  // only when Allow has Read
-	Committed func(c crud.Caller, action model.Action, p *Post, fields []string)
-	MFA       model.Action
-}
-
-// MountPost offers what PostModel.Allow lists, persisted by store, with rules.
-func MountPost(reg crud.Registry, store crud.Store, rules PostRules) {
-	t := crud.Table{Model: &Post{}, NewList: func() model.ModelSlice { return &PostList{} }, Store: store,
-		Search: rules.Search, NewFilter: rules.NewFilter, MFA: rules.MFA}
-	if rules.Create != nil {
-		t.Create = func(c crud.Caller, tx crud.Tx, rec model.Model) error { return rules.Create(c, tx, rec.(*Post)) }
-	}
-	if rules.Update != nil {
-		t.Update = func(c crud.Caller, tx crud.Tx, old, next model.Model, fields []string) error {
-			return rules.Update(c, tx, old.(*Post), next.(*Post), fields)
-		}
-	}
-	if rules.Delete != nil {
-		t.Delete = func(c crud.Caller, tx crud.Tx, rec model.Model) error { return rules.Delete(c, tx, rec.(*Post)) }
-	}
-	if rules.Committed != nil {
-		t.Committed = func(c crud.Caller, a model.Action, rec model.Model, fields []string) { rules.Committed(c, a, rec.(*Post), fields) }
-	}
-	reg.Table(t)
-}
-```
-`definition_crud.go` carries **no build tag** (as today): a module's demo (`seed.Demo`, built with `-tags browser` for WASM) mounts the module through `crud.LoopbackActingAs`, so `MountPatient` must exist in that build; in an app's browser binary nothing calls it and the linker drops it. When the table does not allow Read, `PostRules` has no `Search`/`NewFilter` fields **and** the generated `MountPost` omits `Search: rules.Search, NewFilter: rules.NewFilter` (it must compile). Same for `Create`/`Update`/`Delete`: no field, no assignment. Imports of `definition_crud.go`: `webtyp.com/crud`, `webtyp.com/model`, and `webtyp.com/storage` only when some entity allows Read.
-Delete the old template (`Mount%sCreate/Read/Update/Delete`): `grep -n "Mount%sCreate\|Mount%sUpdate" crud_gen.go` → empty.
-
-## Stage 4 — tests (`tests/crud_gen_test.go`, fixture `tests/testdata/fixturecrud`, rows in `docs/TESTS.md`)
-
-Fixture `definition.go`: `PatientModel` gets `Allow: model.Create | model.Read | model.Update` (keeps its `input.Text()` field);
-add `NoteModel` (table, **no** `Allow`); keep `CodeEntryModel` (form without table).
-
-| Test | Expected |
-|---|---|
-| `TestCrudGen_Compiles` | after `Run`, `definition_crud.go` has `func MountPatient(` and `type PatientRules struct`, `PatientRules` has `Create` and `Update` fields and **no** `Delete` field; no `MountNote`; no `MountCodeEntry`; `go vet ./...` in the fixture passes |
-| `TestCrudGen_AllowMethod` | `definition_gen.go` has `func (*Patient) Allow() model.Action { return PatientModel.Allow }`, `func (*PatientList) Allow()` and `func (*Note) Allow()` |
-| `TestCrudGen_ReadOnlyCompiles` | a table with `Allow: model.Read` only → generated code has no `rules.Create` and the fixture `go vet` passes |
-| `TestCrudGen_AllowOnWireIsError` | temp dir, definition with `Wire: true` and `Allow: model.Read` → `Run` error containing `cannot Allow` |
-| `TestCrudGen_ReadModelGetsAllowNoMount` | definition without DB fields and `Allow: model.Read` → `Allow()` generated, no `Mount`; with `Allow: model.Create` → error `only model.Read` |
-| `TestCrudGen_AllowNonConstantIsError` | `Allow: someVar` → `Run` error containing `constants only` |
-| `TestCrudGen_NoBuildTag` | the generated `definition_crud.go` contains no `//go:build` line |
-| `TestCrudGen_NoAllowNoFile` | package requiring crud whose only table has no `Allow` → no `definition_crud.go` |
-
-Update the existing tests that expect `MountPatientCreate` (`TestCrudGen_WrittenWhenGoModRequiresCrud`, `TestCrudGen_OnlyTableEntities`,
-`TestCrudGen_StaleFileRemoved`): their fixtures add `Allow` and they expect `MountPatient`.
-
-## Stage 5 — documentation
-
-`README.md` and `docs/ARCHITECTURE.md`: replace the four-function section with «`Allow` in the definition → `Mount<E>(reg, store, <E>Rules{…})`»,
-the generated example above, and the rule «no `Allow`, nothing generated».
+| Stage | Files | Commit |
+|---|---|---|
+| 1 | `tests/module_gen_test.go`, `tests/rule_skeleton_test.go`, `tests/rules_parse_test.go` (red) | `test: module mount and rule skeletons (red)` |
+| 2 | `generator.go`, `parse_definition.go`, `module_parse.go` | `feat: parse Rules and model.ModuleDefinition` |
+| 3 | `module_gen.go` (replaces `crud_gen.go`), `generate.go` (module code appended to the one generated file) | `feat!: generate the module's MountOperations` |
+| 4 | `rule_skeleton.go` | `feat: one rule skeleton per AddMyBusinessRule action` |
+| 5 | `tests/testdata/fixturecrud/*`, `lang.json`, `README.md`, `docs/*` | `docs: module declaration` |
+| 6 | `generator.go`, `parse_definition.go`, `generate.go`, `tests/revision_test.go` | `feat: Revision in the field literal` |
 
 ## Delivery check
 
-```bash
-gotest
-(cd tests && go test ./...)
-grep -n "Mount%sCreate\|Mount%sUpdate" crud_gen.go   # empty
-```
-A PR that does not compile, or whose tests could not run, is a failed delivery.
-
-| Stage | Files |
-|---|---|
-| 1 | `parse_definition.go`, `generator.go` |
-| 2 | `generate.go` |
-| 3 | `crud_gen.go` |
-| 4 | `tests/crud_gen_test.go`, `tests/testdata/fixturecrud/*`, `docs/TESTS.md` |
-| 5 | `README.md`, `docs/ARCHITECTURE.md` |
+1. `gotest` in the module and in `tests/` (a PR that does not compile, or whose tests could not run, is a failed delivery).
+2. `langc sync .` → zero untranslated keys, zero reuse warnings (new texts: the errors of stages 2–4).
+3. `grep -rn "Mount%s\|%sRules\|writeCrudFile\|requiresCrud\|crud\.Caller" --include=*.go .` → empty.
+4. The fixture module `tests/testdata/fixturecrud` regenerates with `definitionc` and, once its three rule files are completed with the bodies of stage 5, `go build ./...` inside it passes.
+5. `git diff --stat main` lists only the files named in the stages.
+6. Consumers (the 18 modules, `app`) are regenerated in their own plans; do not touch them here.
