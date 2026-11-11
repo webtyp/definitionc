@@ -23,7 +23,7 @@ require (
 	webtyp.com/modfind v0.0.11 // indirect
 	webtyp.com/msgtype v0.1.0 // indirect
 	webtyp.com/router v0.5.0 // indirect
-	webtyp.com/storage v0.2.1 // indirect
+	webtyp.com/storage v0.2.3 // indirect
 )
 
 replace webtyp.com/definitionc => ..
