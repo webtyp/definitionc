@@ -190,7 +190,7 @@ func renderStoredEntity(b *strings.Builder, e StructInfo) {
 		b.WriteString(fmt.Sprintf("\t\tDelete: func(a crud.CurrentUser, tx crud.Tx, rec model.Model) (crud.RuleAnswer, error) {\n\t\t\treturn rec.(*%s).Delete(a, tx, m)\n\t\t},\n", n))
 	}
 	if e.Rules.Read == domain {
-		b.WriteString(fmt.Sprintf("\t\tSearch: func(a crud.CurrentUser, filter model.Model, text string) ([]storage.Condition, error) {\n\t\t\treturn (&%s{}).Search(a, filter.(*%s), text, m)\n\t\t},\n", n, n))
+		b.WriteString(fmt.Sprintf("\t\tSearch: func(a crud.CurrentUser, filter model.Model) ([]storage.Condition, error) {\n\t\t\treturn (&%s{}).Search(a, filter.(*%s), m)\n\t\t},\n", n, n))
 	}
 	if len(e.ExternalCalls) > 0 {
 		b.WriteString(fmt.Sprintf("\t\tExternalCalls: %sModel.ExternalCalls,\n", n))

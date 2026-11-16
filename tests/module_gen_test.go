@@ -41,8 +41,8 @@ func TestModule_MountsAStoredEntity(t *testing.T) {
 		`Rules: PatientModel.Rules,`,
 		`return rec.(*Patient).Create(a, tx, m)`,
 		`return next.(*Patient).Update(a, tx, old.(*Patient), fields, m)`,
-		`Search: func(a crud.CurrentUser, filter model.Model, text string) ([]storage.Condition, error) {`,
-		`return (&Patient{}).Search(a, filter.(*Patient), text, m)`,
+		`Search: func(a crud.CurrentUser, filter model.Model) ([]storage.Condition, error) {`,
+		`return (&Patient{}).Search(a, filter.(*Patient), m)`,
 	)
 	if strings.Contains(got, "Delete:") {
 		t.Errorf("an entity without Delete mounts a Delete hook:\n%s", got)
@@ -291,4 +291,22 @@ func TestModule_ExternalCallsGeneratesTypeAndRunnerTable(t *testing.T) {
 		`"receipt": func(a crud.CurrentUser, rec model.Model, key crud.IdempotencyKey) (crud.FieldsToSave, error) {`,
 		`return rec.(*Payment).Receipt(a, m, key)`,
 	)
+}
+
+func TestModule_ListsOnlyAfterSearchIsGenerated(t *testing.T) {
+	const want = "func (*Patient) ListsOnlyAfterSearch() bool { return PatientModel.ListsOnlyAfterSearch }"
+	flagged := moduleSource("PatientModel", strings.Replace(patientModel, "Name:  \"patient\",", "Name:  \"patient\", ListsOnlyAfterSearch: true,", 1))
+	dir, err := generate(t, flagged, file{"module.go", moduleType})
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	wantContains(t, squash(read(t, dir, "definition_gen.go")), want)
+
+	dir, err = generate(t, moduleSource("PatientModel", patientModel), file{"module.go", moduleType})
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	if strings.Contains(read(t, dir, "definition_gen.go"), "ListsOnlyAfterSearch()") {
+		t.Error("a definition without the flag generated ListsOnlyAfterSearch()")
+	}
 }

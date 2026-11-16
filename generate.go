@@ -392,6 +392,9 @@ func (o *Generator) GenerateForFile(infos []StructInfo, sourceFile string) error
 		if !info.Wire && (!info.NoDB || info.Allow == uint8(model.Read)) {
 			buf.Write(fmt.Sprintf("func (*%s) Allow() model.Action     { return %sModel.Allow }\n", info.Name, info.Name))
 			buf.Write(fmt.Sprintf("func (*%sList) Allow() model.Action { return %sModel.Allow }\n\n", info.Name, info.Name))
+			if info.ListsOnlyAfterSearch {
+				buf.Write(fmt.Sprintf("func (*%s) ListsOnlyAfterSearch() bool { return %sModel.ListsOnlyAfterSearch }\n\n", info.Name, info.Name))
+			}
 		}
 
 		writeItem(buf, info)

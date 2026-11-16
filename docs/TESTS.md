@@ -25,6 +25,7 @@
 |---|---|
 | `TestModule_MountsAStoredEntity` | a table entity is mounted through `reg.AddStoredEntity` with its hooks, and has no `Delete` hook without a rule |
 | `TestModule_StandardActionsHaveNoHook` | `HaveNoBusinessRule` actions mount no hook and create no rule file |
+| `TestModule_ListsOnlyAfterSearchIsGenerated` | `ListsOnlyAfterSearch: true` generates `ListsOnlyAfterSearch()`; a definition without it does not |
 | `TestModule_MFAIsCarriedToTheStoredEntity` | the `MFA` of the model reaches the stored entity |
 | `TestModule_StorePerEntity` | each table entity gets its own `Store<Entity>()` line |
 | `TestModule_DeleteHook` | a `Delete` rule is mounted as the `Delete` hook |

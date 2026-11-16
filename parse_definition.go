@@ -93,6 +93,10 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 				val, _ := strconv.Unquote(lit.Value)
 				info.ModelName = val
 			}
+		case "ListsOnlyAfterSearch":
+			if id, ok := kv.Value.(*ast.Ident); ok && id.Name == "true" {
+				info.ListsOnlyAfterSearch = true
+			}
 		case "Wire":
 			if id, ok := kv.Value.(*ast.Ident); ok && id.Name == "true" {
 				info.Wire = true
@@ -152,7 +156,7 @@ func (g *Generator) parseDefinition(varName string, expr ast.Expr, file *ast.Fil
 			return nil, fmt.Errf("%s: only model.Read can be allowed on a model without a key field; Create/Update/Delete need a primary key declared with DB (a table, or a resource served by the module's own crud.Store)", varName)
 		}
 	}
-	def := model.Definition{Name: info.ModelName, Wire: info.Wire, Allow: model.Action(info.Allow), Rules: info.Rules.modelRules(), MFA: model.Action(info.MFA), ExternalCalls: info.ExternalCalls}
+	def := model.Definition{Name: info.ModelName, Wire: info.Wire, ListsOnlyAfterSearch: info.ListsOnlyAfterSearch, Allow: model.Action(info.Allow), Rules: info.Rules.modelRules(), MFA: model.Action(info.MFA), ExternalCalls: info.ExternalCalls}
 	if err := definitioncheck.CheckRules(def); err != nil {
 		return nil, fmt.Errf("%s: %s", varName, err.Error())
 	}

@@ -70,18 +70,19 @@ type FieldInfo struct {
 }
 
 type StructInfo struct {
-	Name              string
-	ModelName         string
-	PackageName       string
-	Fields            []FieldInfo
-	ModelNameDeclared bool
-	NoDB              bool
-	Wire              bool // model.Definition{Wire: true}: a transport format, never a form
-	Allow             uint8
-	Rules             RulesInfo // Definition.Rules as written
-	MFA               uint8     // Definition.MFA as written (a set of actions)
-	ExternalCalls     []model.ExternalCallDefinition
-	SourceFile        string
+	Name                 string
+	ModelName            string
+	PackageName          string
+	Fields               []FieldInfo
+	ModelNameDeclared    bool
+	NoDB                 bool
+	Wire                 bool // model.Definition{Wire: true}: a transport format, never a form
+	ListsOnlyAfterSearch bool // model.Definition{ListsOnlyAfterSearch: true}: definitionc generates ListsOnlyAfterSearch()
+	Allow                uint8
+	Rules                RulesInfo // Definition.Rules as written
+	MFA                  uint8     // Definition.MFA as written (a set of actions)
+	ExternalCalls        []model.ExternalCallDefinition
+	SourceFile           string
 }
 
 // RulesInfo is Definition.Rules as written in definition.go: for each action the value of model.RuleMode (0 = undeclared).
@@ -402,7 +403,7 @@ func (s StructInfo) asFields() []model.Field {
 // the field types (a Revision field must be an integer) see them. The rules themselves were judged at parse time.
 func checkResolved(info StructInfo) error {
 	def := model.Definition{
-		Name: info.ModelName, Fields: info.asFields(), Wire: info.Wire,
+		Name: info.ModelName, Fields: info.asFields(), Wire: info.Wire, ListsOnlyAfterSearch: info.ListsOnlyAfterSearch,
 		Allow: model.Action(info.Allow), Rules: info.Rules.modelRules(), MFA: model.Action(info.MFA),
 	}
 	if err := definitioncheck.CheckRules(def); err != nil {
