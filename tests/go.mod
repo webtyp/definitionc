@@ -6,9 +6,9 @@ module webtyp.com/definitionc/tests
 go 1.26.8
 
 require (
-	webtyp.com/definitionc v0.1.47
+	webtyp.com/definitionc v0.1.48
 	webtyp.com/json v0.5.40
-	webtyp.com/model v0.2.22
+	webtyp.com/model v0.2.23
 	webtyp.com/orm v0.12.37
 	webtyp.com/time v0.6.4
 )
